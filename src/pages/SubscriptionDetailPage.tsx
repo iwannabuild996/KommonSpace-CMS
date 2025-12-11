@@ -515,45 +515,64 @@ export default function SubscriptionDetailPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
-                                <button
-                                    type="button"
-                                    className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:w-auto disabled:opacity-50"
-                                    onClick={handleUpdateExtractedData}
-                                    disabled={extracting === viewingData.id}
-                                >
-                                    {extracting === viewingData.id ? 'Saving...' : 'Save Changes'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                                    onClick={async () => {
-                                        await handleExtractData(viewingData);
-                                        // setViewingData(null); // Keep open to see new values? Or close? User said close.
-                                        // Actually user said for RE-EXTRACT: "only close... after getting response". 
-                                        // But if we re-extract, we probably want to REFRESH the form values too.
-                                        // handleExtractData updates the DB. We need to update local `editedData`.
-                                        // Let's modify handleExtractData or just manually update here.
-                                        // Actually handleExtractData reloads Data which updates `files` but `viewingData` is a separate state reference.
-                                        // We might need to close it to refresh, or manually update.
-                                        // Given user requirement "close after response", the existing logic `await ...; setViewingData(null)` is correct for that button. 
-                                        // WAIT, I need to keep the "Re-extract" button but maybe move it?
-                                        // Let's put Re-extract as a secondary action.
-                                    }}
-                                    disabled={extracting === viewingData.id}
-                                >
-                                    {/* WAIT, I am replacing the buttons. The previous code had Re-Extract and Close. */
-                           /* I need: Save, Re-extract, Close. */
-                           /* Let's construct the buttons carefully. */}
-                                    Re-extract
-                                </button>
-                                <button
-                                    type="button"
-                                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                                    onClick={() => setViewingData(null)}
-                                >
-                                    Cancel
-                                </button>
+                            <div className="bg-gray-50 px-4 py-3 sm:flex sm:justify-between sm:px-6">
+                                <div className="mt-3 sm:mt-0">
+                                    <button
+                                        type="button"
+                                        className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
+                                        onClick={() => {
+                                            const name = editedData?.name || '';
+                                            const address = editedData?.address || '';
+
+                                            const text = `500 Rupees Stamp Paper
+
+First Party
+Director - Muhammed Shajar C
+Loomian Developers Private Limited
+10/1744, 1st Floor, Sowbhagya building, Athani, Kakkanad, Kusumagiri P.O, Kochi, 682030
+
+Second Party
+${name}
+${address}`;
+
+                                            navigator.clipboard.writeText(text).then(() => {
+                                                addToast('Copied Agreement Parties to clipboard', 'success');
+                                            }).catch(err => {
+                                                console.error('Failed to copy', err);
+                                                addToast('Failed to copy to clipboard', 'error');
+                                            });
+                                        }}
+                                    >
+                                        Agreement Parties
+                                    </button>
+                                </div>
+                                <div className="sm:flex sm:flex-row-reverse gap-2">
+                                    <button
+                                        type="button"
+                                        className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:w-auto disabled:opacity-50"
+                                        onClick={handleUpdateExtractedData}
+                                        disabled={extracting === viewingData.id}
+                                    >
+                                        {extracting === viewingData.id ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                        onClick={async () => {
+                                            await handleExtractData(viewingData);
+                                        }}
+                                        disabled={extracting === viewingData.id}
+                                    >
+                                        Re-extract
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                        onClick={() => setViewingData(null)}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
