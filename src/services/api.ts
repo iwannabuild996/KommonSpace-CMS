@@ -237,12 +237,12 @@ export const getSubscriptionLogs = async (subscriptionId: string) => {
     const { data, error } = await supabase
         .from('subscription_status_logs')
         .select(`
-      *,
-      admin_users ( name )
+      *
     `)
         .eq('subscription_id', subscriptionId)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data as (SubscriptionLog & { admin_users?: { name: string } | null })[];
+    // admin name fetch removed as column is missing; layout can imply "Admin" or fetch differently if needed
+    return data as SubscriptionLog[];
 };

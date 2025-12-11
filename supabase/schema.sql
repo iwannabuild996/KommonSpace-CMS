@@ -39,6 +39,7 @@ CREATE TABLE plans (
 
 -- ADMIN USERS (LOGIN ACCOUNTS)
 CREATE TABLE admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role text DEFAULT 'admin'
 );
@@ -87,5 +88,24 @@ CREATE TABLE suite_numbers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   suite_number TEXT UNIQUE NOT NULL,
   status TEXT DEFAULT 'available',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TYPE subscription_file_label AS ENUM (
+  'Signatory Aadhaar',
+  'Certificate of Incorporation',
+  'Others'
+);
+
+-- 2) Subscription files table
+CREATE TABLE subscription_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+  label subscription_file_label NOT NULL,
+  file_name TEXT NOT NULL,          -- original filename (e.g. aadhaar.pdf)
+  file_path TEXT NOT NULL,          -- storage path or object key (e.g. subscriptions/{subscription_id}/aadhaar.pdf)
+  mime_type TEXT,                   -- e.g. application/pdf, image/png
+  file_size_bytes BIGINT,           -- file size in bytes
+  uploaded_by UUID,                 -- references admin_users(id) who uploaded (optional NULL if uploaded by system)
   created_at TIMESTAMP DEFAULT NOW()
 );

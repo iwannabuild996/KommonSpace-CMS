@@ -22,6 +22,8 @@ export default function SubscriptionDetailPage() {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
 
+    const [error, setError] = useState<string | null>(null);
+
     // Edit State
     const [status, setStatus] = useState<SubscriptionStatus>('Advance Received');
     const [rubberStamp, setRubberStamp] = useState<RubberStampStatus>('Not Available');
@@ -29,6 +31,7 @@ export default function SubscriptionDetailPage() {
     const fetchData = async () => {
         if (!id) return;
         setLoading(true);
+        setError(null);
         try {
             const [subData, logsData] = await Promise.all([
                 getSubscription(id),
@@ -44,7 +47,9 @@ export default function SubscriptionDetailPage() {
             }
         } catch (err: any) {
             console.error(err);
-            addToast('Failed to load subscription details', 'error');
+            const msg = err.message || 'Failed to load subscription details';
+            setError(msg);
+            addToast(msg, 'error');
         } finally {
             setLoading(false);
         }
@@ -72,8 +77,17 @@ export default function SubscriptionDetailPage() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center">Loading...</div>;
-    if (!subscription) return <div className="p-8 text-center">Subscription not found</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500">Loading subscription details...</div>;
+
+    if (error) return (
+        <div className="p-8 text-center">
+            <h3 className="text-lg font-medium text-red-900">Error Loading Subscription</h3>
+            <p className="mt-1 text-sm text-red-700">{error}</p>
+            <button onClick={fetchData} className="mt-4 text-indigo-600 hover:text-indigo-500">Try Again</button>
+        </div>
+    );
+
+    if (!subscription) return <div className="p-8 text-center text-gray-500">Subscription not found</div>;
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
