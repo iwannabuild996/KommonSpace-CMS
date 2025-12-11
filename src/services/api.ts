@@ -128,6 +128,17 @@ export const updatePlan = async (id: string, payload: Partial<Plan>) => {
     return data as Plan;
 };
 
+// 4.6 Get Subscriptions
+export const getSubscriptions = async () => {
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*, users(name), plans(name)')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as any[];
+};
+
 // 5. Create Subscription (Mock Transaction)
 // NOTE: For true atomicity, use a Supabase RPC function. Here we chain calls.
 export const createSubscription = async (
