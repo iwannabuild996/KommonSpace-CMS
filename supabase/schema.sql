@@ -39,11 +39,8 @@ CREATE TABLE plans (
 
 -- ADMIN USERS (LOGIN ACCOUNTS)
 CREATE TABLE admin_users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  role TEXT DEFAULT 'admin',
-  created_at TIMESTAMP DEFAULT NOW()
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role text DEFAULT 'admin'
 );
 
 -- SUBSCRIPTIONS TABLE
