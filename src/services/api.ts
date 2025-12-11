@@ -260,6 +260,7 @@ export interface SubscriptionFile {
     mime_type?: string;
     file_size_bytes?: number;
     created_at?: string;
+    extracted_data?: any; // New field for JSON data
     // Helper property for UI (signed URL)
     signedUrl?: string;
 }
@@ -300,6 +301,30 @@ export const uploadSubscriptionFile = async (
     if (dbError) throw new Error(`Database Error: ${dbError.message}`);
     return data as SubscriptionFile;
 };
+
+// 10. Extract Data from File (Edge Function)
+export const extractSubscriptionData = async (filePath: string) => {
+    const { data, error } = await supabase.functions.invoke('extract-aadhaar', {
+        body: { file_path: filePath }
+    });
+
+    if (error) throw error;
+    return data;
+};
+
+// 11. Update Subscription File (e.g. save extracted data)
+export const updateSubscriptionFile = async (fileId: string, updates: Partial<SubscriptionFile>) => {
+    const { data, error } = await supabase
+        .from('subscription_files')
+        .update(updates)
+        .eq('id', fileId)
+        .select()
+        .single();
+
+    if (error) throw new Error(`Database Error: ${error.message}`);
+    return data as SubscriptionFile;
+}
+
 
 // 9. Get Subscription Files (with Signed URLs)
 export const getSubscriptionFiles = async (subscriptionId: string) => {
