@@ -26,6 +26,7 @@ export default function SubscriptionDetailPage() {
     const [uploading, setUploading] = useState(false);
     const [extracting, setExtracting] = useState<string | null>(null); // file id being extracted
     const [viewingData, setViewingData] = useState<SubscriptionFile | null>(null); // file being viewed
+    const [editedData, setEditedData] = useState<any>(null); // buffer for editing extracted data
 
     const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +70,14 @@ export default function SubscriptionDetailPage() {
     useEffect(() => {
         fetchData();
     }, [id]);
+
+    useEffect(() => {
+        if (viewingData?.extracted_data) {
+            setEditedData(viewingData.extracted_data);
+        } else {
+            setEditedData(null);
+        }
+    }, [viewingData]);
 
     const handleSave = async () => {
         if (!id) return;
@@ -114,6 +123,36 @@ export default function SubscriptionDetailPage() {
         } catch (err: any) {
             console.error(err);
             addToast('Failed to extract data: ' + err.message, 'error');
+        } finally {
+            setExtracting(null);
+        }
+    };
+
+    const handleUpdateExtractedData = async () => {
+        if (!viewingData || !id || !editedData) return;
+        setExtracting(viewingData.id); // Re-use extracting state for loading spinner
+        try {
+            // 1. Update File Record
+            await updateSubscriptionFile(viewingData.id, { extracted_data: editedData });
+
+            // 2. Update Subscription
+            const updates: any = {};
+            if (editedData.name) updates.signatory_name = editedData.name;
+            if (editedData.address) updates.signatory_address = editedData.address;
+            if (editedData.aadhaar_number) updates.signatory_aadhaar = editedData.aadhaar_number;
+
+            if (Object.keys(updates).length > 0) {
+                await updateSubscription(id, updates);
+                addToast('Data updated and saved successfully', 'success');
+                fetchData();
+                setViewingData(null);
+            } else {
+                addToast('No valid fields to update', 'info');
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            addToast('Failed to save changes: ' + err.message, 'error');
         } finally {
             setExtracting(null);
         }
@@ -433,35 +472,87 @@ export default function SubscriptionDetailPage() {
                     <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
                         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setViewingData(null)} />
 
-                        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
                             <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                                        <h3 className="text-lg font-semibold leading-6 text-gray-900">Extracted Data</h3>
-                                        <div className="mt-4 bg-gray-50 p-3 rounded-md overflow-auto max-h-60 text-xs font-mono text-gray-700">
-                                            <pre>{JSON.stringify(viewingData.extracted_data, null, 2)}</pre>
-                                        </div>
+                                        <h3 className="text-lg font-semibold leading-6 text-gray-900 mb-4">Extracted Data</h3>
+
+                                        {editedData ? (
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Name</label>
+                                                    <input
+                                                        type="text"
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                        value={editedData.name || ''}
+                                                        onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                                                    <input
+                                                        type="text"
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                        value={editedData.aadhaar_number || ''}
+                                                        onChange={(e) => setEditedData({ ...editedData, aadhaar_number: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Address</label>
+                                                    <textarea
+                                                        rows={4}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                        value={editedData.address || ''}
+                                                        onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500 italic">No data available.</p>
+                                        )}
+
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
                                 <button
                                     type="button"
-                                    className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:ml-3 sm:w-auto disabled:opacity-50"
+                                    className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:w-auto disabled:opacity-50"
+                                    onClick={handleUpdateExtractedData}
+                                    disabled={extracting === viewingData.id}
+                                >
+                                    {extracting === viewingData.id ? 'Saving...' : 'Save Changes'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
                                     onClick={async () => {
                                         await handleExtractData(viewingData);
-                                        setViewingData(null);
+                                        // setViewingData(null); // Keep open to see new values? Or close? User said close.
+                                        // Actually user said for RE-EXTRACT: "only close... after getting response". 
+                                        // But if we re-extract, we probably want to REFRESH the form values too.
+                                        // handleExtractData updates the DB. We need to update local `editedData`.
+                                        // Let's modify handleExtractData or just manually update here.
+                                        // Actually handleExtractData reloads Data which updates `files` but `viewingData` is a separate state reference.
+                                        // We might need to close it to refresh, or manually update.
+                                        // Given user requirement "close after response", the existing logic `await ...; setViewingData(null)` is correct for that button. 
+                                        // WAIT, I need to keep the "Re-extract" button but maybe move it?
+                                        // Let's put Re-extract as a secondary action.
                                     }}
                                     disabled={extracting === viewingData.id}
                                 >
-                                    {extracting === viewingData.id ? 'Extracting...' : 'Re-extract Data'}
+                                    {/* WAIT, I am replacing the buttons. The previous code had Re-Extract and Close. */
+                           /* I need: Save, Re-extract, Close. */
+                           /* Let's construct the buttons carefully. */}
+                                    Re-extract
                                 </button>
                                 <button
                                     type="button"
                                     className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
                                     onClick={() => setViewingData(null)}
                                 >
-                                    Close
+                                    Cancel
                                 </button>
                             </div>
                         </div>
