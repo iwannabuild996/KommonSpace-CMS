@@ -65,6 +65,14 @@ USING (
 );
 
 -- Suite Numbers
+-- Suite Numbers
 CREATE POLICY "Allow admin access" ON suite_numbers
+FOR ALL TO authenticated
+USING (is_admin());
+
+-- Subscription Files
+ALTER TABLE subscription_files ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow admin access" ON subscription_files
 FOR ALL TO authenticated
 USING (is_admin());

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs } from '../services/api';
-import type { SubscriptionStatus, RubberStampStatus } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles } from '../services/api';
+import type { SubscriptionStatus, RubberStampStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
 interface Log {
@@ -19,8 +19,11 @@ export default function SubscriptionDetailPage() {
 
     const [subscription, setSubscription] = useState<any>(null);
     const [logs, setLogs] = useState<Log[]>([]);
+    const [files, setFiles] = useState<SubscriptionFile[]>([]);
+
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     const [error, setError] = useState<string | null>(null);
 
@@ -28,17 +31,23 @@ export default function SubscriptionDetailPage() {
     const [status, setStatus] = useState<SubscriptionStatus>('Advance Received');
     const [rubberStamp, setRubberStamp] = useState<RubberStampStatus>('Not Available');
 
+    // File Upload State
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [fileLabel, setFileLabel] = useState<SubscriptionFileLabel>('Others');
+
     const fetchData = async () => {
         if (!id) return;
         setLoading(true);
         setError(null);
         try {
-            const [subData, logsData] = await Promise.all([
+            const [subData, logsData, filesData] = await Promise.all([
                 getSubscription(id),
-                getSubscriptionLogs(id)
+                getSubscriptionLogs(id),
+                getSubscriptionFiles(id)
             ]);
             setSubscription(subData);
-            setLogs(logsData as any[]); // logsData type might need adjustment
+            setLogs(logsData as any[]);
+            setFiles(filesData);
 
             // Initialize edit state
             if (subData) {
@@ -74,6 +83,26 @@ export default function SubscriptionDetailPage() {
             addToast('Failed to update subscription', 'error');
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleFileUpload = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id || !selectedFile) return;
+
+        setUploading(true);
+        try {
+            await uploadSubscriptionFile(id, selectedFile, fileLabel);
+            addToast('File uploaded successfully', 'success');
+            setSelectedFile(null);
+            // Refresh files list
+            const filesData = await getSubscriptionFiles(id);
+            setFiles(filesData);
+        } catch (err: any) {
+            console.error(err);
+            addToast(err.message || 'Failed to upload file', 'error');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -225,8 +254,78 @@ export default function SubscriptionDetailPage() {
                     </div>
                 </div>
 
-                {/* Right Column: Timeline */}
-                <div>
+                {/* Right Column: Files & Timeline */}
+                <div className="space-y-6">
+
+                    {/* Files Section */}
+                    <div className="bg-white shadow sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+                            <h3 className="text-base font-semibold leading-6 text-gray-900">Files</h3>
+                        </div>
+                        <div className="px-4 py-5 sm:p-6">
+                            {/* File List */}
+                            <ul role="list" className="divide-y divide-gray-100 rounded-md border border-gray-200 mb-6">
+                                {files.length === 0 && (
+                                    <li className="flex items-center justify-center py-4 text-sm text-gray-500">No files uploaded yet.</li>
+                                )}
+                                {files.map((file) => (
+                                    <li key={file.id} className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
+                                        <div className="flex w-0 flex-1 items-center">
+                                            <svg className="h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path fillRule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clipRule="evenodd" />
+                                            </svg>
+                                            <div className="ml-4 flex min-w-0 flex-1 gap-2">
+                                                <span className="truncate font-medium">{file.file_name}</span>
+                                                <span className="flex-shrink-0 text-gray-400">({file.label})</span>
+                                            </div>
+                                        </div>
+                                        <div className="ml-4 flex-shrink-0">
+                                            {file.signedUrl ? (
+                                                <a href={file.signedUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-500">
+                                                    Download
+                                                </a>
+                                            ) : (
+                                                <span className="text-gray-400">Expired</span>
+                                            )}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* Upload Form */}
+                            <form onSubmit={handleFileUpload} className="space-y-3 p-4 bg-gray-50 rounded-md">
+                                <div>
+                                    <label className="block text-sm font-medium leading-6 text-gray-900">Upload Document</label>
+                                    <div className="mt-2 flex gap-2">
+                                        <select
+                                            className="block w-1/3 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                            value={fileLabel}
+                                            onChange={(e) => setFileLabel(e.target.value as SubscriptionFileLabel)}
+                                        >
+                                            <option value="Signatory Aadhaar">Signatory Aadhaar</option>
+                                            <option value="Certificate of Incorporation">Incorporation Cert</option>
+                                            <option value="Others">Others</option>
+                                        </select>
+                                        <input
+                                            type="file"
+                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <button
+                                        type="submit"
+                                        disabled={!selectedFile || uploading}
+                                        className="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                                    >
+                                        {uploading ? 'Uploading...' : 'Upload'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                     <div className="bg-white shadow sm:rounded-lg">
                         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
                             <h3 className="text-base font-semibold leading-6 text-gray-900">Activity Timeline</h3>

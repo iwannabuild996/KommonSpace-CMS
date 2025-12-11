@@ -246,3 +246,81 @@ export const getSubscriptionLogs = async (subscriptionId: string) => {
     // admin name fetch removed as column is missing; layout can imply "Admin" or fetch differently if needed
     return data as SubscriptionLog[];
 };
+
+// --- File Handling ---
+
+export type SubscriptionFileLabel = 'Signatory Aadhaar' | 'Certificate of Incorporation' | 'Others';
+
+export interface SubscriptionFile {
+    id: string;
+    subscription_id: string;
+    label: SubscriptionFileLabel;
+    file_name: string;
+    file_path: string;
+    mime_type?: string;
+    file_size_bytes?: number;
+    created_at?: string;
+    // Helper property for UI (signed URL)
+    signedUrl?: string;
+}
+
+// 8. Upload Subscription File
+export const uploadSubscriptionFile = async (
+    subscriptionId: string,
+    file: File,
+    label: SubscriptionFileLabel
+) => {
+    // 1. Upload to Storage
+    const fileName = `${subscriptionId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('kommonspace')
+        .upload(filePath, file);
+
+    if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`);
+
+    // 2. Insert Record
+    const user = await supabase.auth.getUser();
+
+    const { data, error: dbError } = await supabase
+        .from('subscription_files')
+        .insert({
+            subscription_id: subscriptionId,
+            label: label,
+            file_name: file.name,
+            file_path: filePath,
+            mime_type: file.type,
+            file_size_bytes: file.size,
+            uploaded_by: user.data.user?.id // Optional linking
+        })
+        .select()
+        .single();
+
+    if (dbError) throw new Error(`Database Error: ${dbError.message}`);
+    return data as SubscriptionFile;
+};
+
+// 9. Get Subscription Files (with Signed URLs)
+export const getSubscriptionFiles = async (subscriptionId: string) => {
+    // 1. Get Records
+    const { data, error } = await supabase
+        .from('subscription_files')
+        .select('*')
+        .eq('subscription_id', subscriptionId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // 2. Generate Signed URLs for each
+    const files = data as SubscriptionFile[];
+    const filesWithUrls = await Promise.all(files.map(async (f) => {
+        const { data: signedData } = await supabase.storage
+            .from('kommonspace')
+            .createSignedUrl(f.file_path, 3600); // 1 hour expiry
+
+        return { ...f, signedUrl: signedData?.signedUrl };
+    }));
+
+    return filesWithUrls;
+};
