@@ -100,7 +100,8 @@ export default function SubscriptionDetailPage() {
     const handleExtractData = async (file: SubscriptionFile) => {
         setExtracting(file.id);
         try {
-            const extracted = await extractSubscriptionData(file.file_path, file.mime_type);
+            const functionName = file.label === 'Certificate of Incorporation' ? 'extract-coi' : 'extract-aadhaar';
+            const extracted = await extractSubscriptionData(file.file_path, file.mime_type, functionName);
 
             if (extracted) {
                 // 1. Save extracted data to file record
@@ -138,8 +139,21 @@ export default function SubscriptionDetailPage() {
             // 2. Update Subscription
             const updates: any = {};
             if (editedData.name) updates.signatory_name = editedData.name;
-            if (editedData.address) updates.signatory_address = editedData.address;
+            if (editedData.address) updates.signatory_address = editedData.address; // For Aadhaar, this is signatory address
             if (editedData.aadhaar_number) updates.signatory_aadhaar = editedData.aadhaar_number;
+
+            // COI Updates
+            if (editedData.company_name) updates.company_name = editedData.company_name;
+            // If it's a COI, address might map to company_address
+            // We can check the viewingData label to decide mapping if needed, but for now specific field names help.
+            // If extracted data has 'address' and it's a COI file, maybe we map to company_address?
+            // Let's rely on explicit 'company_address' field if we want to be safe, but the prompt returns 'address'.
+            // Strategy: If file label is COI, map address -> company_address.
+            if (viewingData.label === 'Certificate of Incorporation' && editedData.address) {
+                updates.company_address = editedData.address;
+                // Don't overwrite signatory_address for COI
+                delete updates.signatory_address;
+            }
 
             if (Object.keys(updates).length > 0) {
                 await updateSubscription(id, updates);
@@ -351,7 +365,7 @@ export default function SubscriptionDetailPage() {
                                                     <span className="truncate font-medium">{file.file_name}</span>
                                                     <span className="flex-shrink-0 text-gray-400">({file.label})</span>
                                                 </div>
-                                                {file.label === 'Signatory Aadhaar' && (
+                                                {(file.label === 'Signatory Aadhaar' || file.label === 'Certificate of Incorporation') && (
                                                     file.extracted_data ? (
                                                         <button
                                                             onClick={() => setViewingData(file)}
@@ -480,24 +494,76 @@ export default function SubscriptionDetailPage() {
 
                                         {editedData ? (
                                             <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Name</label>
-                                                    <input
-                                                        type="text"
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                        value={editedData.name || ''}
-                                                        onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Aadhaar Number</label>
-                                                    <input
-                                                        type="text"
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                        value={editedData.aadhaar_number || ''}
-                                                        onChange={(e) => setEditedData({ ...editedData, aadhaar_number: e.target.value })}
-                                                    />
-                                                </div>
+                                                {/* Common / Aadhaar Fields */}
+                                                {editedData.name !== undefined && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">Name</label>
+                                                        <input
+                                                            type="text"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.name || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {editedData.aadhaar_number !== undefined && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                                                        <input
+                                                            type="text"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.aadhaar_number || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, aadhaar_number: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* COI Fields */}
+                                                {editedData.company_name !== undefined && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                                        <input
+                                                            type="text"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.company_name || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, company_name: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {editedData.cin !== undefined && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">CIN</label>
+                                                        <input
+                                                            type="text"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.cin || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, cin: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {editedData.pan !== undefined && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">PAN</label>
+                                                        <input
+                                                            type="text"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.pan || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, pan: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {editedData.tan !== undefined && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">TAN</label>
+                                                        <input
+                                                            type="text"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.tan || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, tan: e.target.value })}
+                                                        />
+                                                    </div>
+                                                )}
+
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700">Address</label>
                                                     <textarea

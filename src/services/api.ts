@@ -303,8 +303,8 @@ export const uploadSubscriptionFile = async (
 };
 
 // 10. Extract Data from File (Edge Function)
-export const extractSubscriptionData = async (filePath: string, mimeType?: string) => {
-    const { data, error } = await supabase.functions.invoke('extract-aadhaar', {
+export const extractSubscriptionData = async (filePath: string, mimeType?: string, functionName: string = 'extract-aadhaar') => {
+    const { data, error } = await supabase.functions.invoke(functionName, {
         body: { file_path: filePath, mime_type: mimeType }
     });
 
