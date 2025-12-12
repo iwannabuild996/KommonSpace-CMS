@@ -100,7 +100,7 @@ export default function SubscriptionDetailPage() {
     const handleExtractData = async (file: SubscriptionFile) => {
         setExtracting(file.id);
         try {
-            const extracted = await extractSubscriptionData(file.file_path);
+            const extracted = await extractSubscriptionData(file.file_path, file.mime_type);
 
             if (extracted) {
                 // 1. Save extracted data to file record

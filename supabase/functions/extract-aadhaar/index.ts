@@ -15,8 +15,8 @@ serve(async (req) => {
     }
 
     try {
-        const { file_path } = await req.json()
-        console.log(`Received request for file: ${file_path}`);
+        const { file_path, mime_type } = await req.json()
+        console.log(`Received request for file: ${file_path}, mime: ${mime_type}`);
 
         if (!file_path) {
             throw new Error('Missing file_path')
@@ -56,7 +56,7 @@ serve(async (req) => {
 
         console.log('Initializing Gemini...');
         const genAI = new GoogleGenerativeAI(googleApiKey)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
         // 5. Prompt for Extraction
         console.log('Sending to Gemini...');
@@ -70,12 +70,16 @@ serve(async (req) => {
       If a field is not found, return null for that field.
     `
 
+        // Use passed mime_type or default to PDF
+        const mimeType = mime_type || "application/pdf";
+        console.log(`Using mimeType: ${mimeType}`);
+
         const result = await model.generateContent([
             prompt,
             {
                 inlineData: {
                     data: base64Data,
-                    mimeType: "application/pdf"
+                    mimeType: mimeType
                 }
             }
         ])
