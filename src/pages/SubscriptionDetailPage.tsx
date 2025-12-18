@@ -43,6 +43,7 @@ export default function SubscriptionDetailPage() {
     // Information Edit State
     const [isEditingInfo, setIsEditingInfo] = useState(false);
     const [infoEditData, setInfoEditData] = useState<any>({});
+    const [userSearchQuery, setUserSearchQuery] = useState('');
 
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -423,15 +424,31 @@ export default function SubscriptionDetailPage() {
                                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">User</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Search users..."
+                                                value={userSearchQuery}
+                                                onChange={(e) => setUserSearchQuery(e.target.value)}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border mb-2"
+                                            />
                                             <select
                                                 value={infoEditData.user_id || ''}
                                                 onChange={(e) => setInfoEditData({ ...infoEditData, user_id: e.target.value })}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                size={5}
                                             >
                                                 <option value="">Select a user</option>
-                                                {users.map((user) => (
-                                                    <option key={user.id} value={user.id}>{user.name}</option>
-                                                ))}
+                                                {users
+                                                    .filter(user =>
+                                                        user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                        (user.phone && user.phone.includes(userSearchQuery)) ||
+                                                        (user.email && user.email.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                                                    )
+                                                    .map((user) => (
+                                                        <option key={user.id} value={user.id}>
+                                                            {user.name} {user.phone ? `(${user.phone})` : ''}
+                                                        </option>
+                                                    ))}
                                             </select>
                                         </div>
                                         <div>
