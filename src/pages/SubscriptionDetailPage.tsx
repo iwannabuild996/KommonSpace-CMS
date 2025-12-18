@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans } from '../services/api';
 import type { SubscriptionStatus, RubberStampStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
@@ -20,6 +20,7 @@ export default function SubscriptionDetailPage() {
     const [subscription, setSubscription] = useState<any>(null);
     const [logs, setLogs] = useState<Log[]>([]);
     const [files, setFiles] = useState<SubscriptionFile[]>([]);
+    const [plans, setPlans] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -37,6 +38,10 @@ export default function SubscriptionDetailPage() {
 
     // Company Edit State
     const [isEditingCompany, setIsEditingCompany] = useState(false);
+
+    // Information Edit State
+    const [isEditingInfo, setIsEditingInfo] = useState(false);
+    const [infoEditData, setInfoEditData] = useState<any>({});
 
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -56,14 +61,16 @@ export default function SubscriptionDetailPage() {
         if (!id) return;
         setLoading(true);
         try {
-            const [subData, logsData, filesData] = await Promise.all([
+            const [subData, logsData, filesData, plansData] = await Promise.all([
                 getSubscription(id),
                 getSubscriptionLogs(id),
-                getSubscriptionFiles(id)
+                getSubscriptionFiles(id),
+                getPlans()
             ]);
             setSubscription(subData);
             setLogs(logsData as any[]);
             setFiles(filesData);
+            setPlans(plansData);
 
             // Initialize edit state
             if (subData) {
@@ -342,49 +349,185 @@ export default function SubscriptionDetailPage() {
 
                     {/* Details Card */}
                     <div className="overflow-hidden bg-white shadow sm:rounded-lg">
-                        <div className="px-4 py-5 sm:px-6">
-                            <h3 className="text-base font-semibold leading-6 text-gray-900">Information</h3>
-                            <p className="mt-1 max-w-2xl text-sm text-gray-500">Details about the subscription and signatory.</p>
+                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Information</h3>
+                                <p className="mt-1 max-w-2xl text-sm text-gray-500">Details about the subscription and signatory.</p>
+                            </div>
+                            {!isEditingInfo && (
+                                <button
+                                    onClick={() => {
+                                        setIsEditingInfo(true);
+                                        setInfoEditData({
+                                            plan_id: subscription.plan_id,
+                                            signatory_type: subscription.signatory_type,
+                                            suite_number: subscription.suite_number,
+                                            purchased_date: subscription.purchased_date,
+                                            start_date: subscription.start_date,
+                                            expiry_date: subscription.expiry_date,
+                                            purchase_amount: subscription.purchase_amount,
+                                            received_amount: subscription.received_amount
+                                        });
+                                    }}
+                                    className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                >
+                                    Edit
+                                </button>
+                            )}
                         </div>
                         <div className="border-t border-gray-100">
-                            <dl className="divide-y divide-gray-100">
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">User</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.users?.name}</dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Plan</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.plans?.name}</dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Suite Number</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.suite_number || '-'}</dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Dates</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                        <p>Purchased: {subscription.purchased_date}</p>
-                                        <p>Start: {subscription.start_date}</p>
-                                        <p>Expiry: {subscription.expiry_date}</p>
-                                    </dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Financials</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                        <p>Amount: ₹{subscription.purchase_amount}</p>
-                                        <p>Received: ₹{subscription.received_amount}</p>
-                                    </dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Signatory Type</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
-                                            {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
-                                        </span>
-                                    </dd>
-                                </div>
+                            {!isEditingInfo ? (
+                                <dl className="divide-y divide-gray-100">
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">User</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.users?.name}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Plan</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.plans?.name}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Suite Number</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.suite_number || '-'}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Dates</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            <p>Purchased: {subscription.purchased_date}</p>
+                                            <p>Start: {subscription.start_date}</p>
+                                            <p>Expiry: {subscription.expiry_date}</p>
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Financials</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            <p>Amount: ₹{subscription.purchase_amount}</p>
+                                            <p>Received: ₹{subscription.received_amount}</p>
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Signatory Type</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
+                                                {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
+                                            </span>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            ) : (
+                                <div className="p-6 space-y-6">
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Plan</label>
+                                            <select
+                                                value={infoEditData.plan_id || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, plan_id: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            >
+                                                <option value="">Select a plan</option>
+                                                {plans.map((plan) => (
+                                                    <option key={plan.id} value={plan.id}>{plan.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Signatory Type</label>
+                                            <select
+                                                value={infoEditData.signatory_type || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, signatory_type: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            >
+                                                <option value="individual">Individual</option>
+                                                <option value="company">Company</option>
+                                            </select>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700">Suite Number</label>
+                                            <input
+                                                type="text"
+                                                value={infoEditData.suite_number || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, suite_number: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Purchased Date</label>
+                                            <input
+                                                type="date"
+                                                value={infoEditData.purchased_date || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, purchased_date: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={infoEditData.start_date || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, start_date: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
+                                            <input
+                                                type="date"
+                                                value={infoEditData.expiry_date || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, expiry_date: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Purchase Amount (₹)</label>
+                                            <input
+                                                type="number"
+                                                value={infoEditData.purchase_amount || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, purchase_amount: parseFloat(e.target.value) })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Received Amount (₹)</label>
+                                            <input
+                                                type="number"
+                                                value={infoEditData.received_amount || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, received_amount: parseFloat(e.target.value) })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                    </div>
 
-                            </dl>
+                                    {/* Action Buttons */}
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                        <button
+                                            onClick={() => setIsEditingInfo(false)}
+                                            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                setUpdating(true);
+                                                try {
+                                                    await updateSubscription(id!, infoEditData);
+                                                    addToast('Information updated successfully', 'success');
+                                                    setIsEditingInfo(false);
+                                                    fetchData();
+                                                } catch (error: any) {
+                                                    console.error(error);
+                                                    addToast(error.message || 'Failed to update information', 'error');
+                                                } finally {
+                                                    setUpdating(false);
+                                                }
+                                            }}
+                                            disabled={updating}
+                                            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                                        >
+                                            {updating ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
