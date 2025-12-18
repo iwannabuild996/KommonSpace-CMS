@@ -27,6 +27,13 @@ export default function SubscriptionDetailPage() {
     const [viewingData, setViewingData] = useState<SubscriptionFile | null>(null); // file being viewed
     const [editedData, setEditedData] = useState<any>(null); // buffer for editing extracted data
 
+    // Signatory Edit State
+    const [isEditingSignatory, setIsEditingSignatory] = useState(false);
+    const [signatoryEditData, setSignatoryEditData] = useState<any>({});
+    const [companyEditData, setCompanyEditData] = useState<any>({});
+    const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+    const [coiFile, setCoiFile] = useState<File | null>(null);
+
     // Edit State
     const [status, setStatus] = useState<SubscriptionStatus>('Advance Received');
     const [rubberStamp, setRubberStamp] = useState<RubberStampStatus>('Not Available');
@@ -212,6 +219,41 @@ export default function SubscriptionDetailPage() {
         }
     };
 
+    const handleSaveSignatory = async () => {
+        if (!id) return;
+        setUpdating(true);
+        try {
+            // 1. Update Signatory Data
+            await updateSubscriptionSignatory(id, signatoryEditData);
+
+            // 2. Update Company Data if company type
+            if (subscription.signatory_type === 'company') {
+                await updateSubscriptionCompany(id, companyEditData);
+            }
+
+            // 3. Upload Aadhaar file if provided
+            if (aadhaarFile) {
+                await uploadSubscriptionFile(id, aadhaarFile, 'Signatory Aadhaar');
+            }
+
+            // 4. Upload COI file if provided
+            if (coiFile) {
+                await uploadSubscriptionFile(id, coiFile, 'Certificate of Incorporation');
+            }
+
+            addToast('Signatory details updated successfully', 'success');
+            setIsEditingSignatory(false);
+            setAadhaarFile(null);
+            setCoiFile(null);
+            fetchData(); // Refresh data
+        } catch (err: any) {
+            console.error(err);
+            addToast(err.message || 'Failed to update signatory details', 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-gray-500">Loading subscription details...</div>;
 
     if (!subscription) return <div className="p-8 text-center text-gray-500">Subscription not found</div>;
@@ -336,50 +378,214 @@ export default function SubscriptionDetailPage() {
 
                     {/* Signatory Details Card */}
                     <div className="overflow-hidden bg-white shadow sm:rounded-lg">
-                        <div className="px-4 py-5 sm:px-6">
-                            <h3 className="text-base font-semibold leading-6 text-gray-900">Signatory Details</h3>
-                            <p className="mt-1 max-w-2xl text-sm text-gray-500">Information about the signatory.</p>
+                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Signatory Details</h3>
+                                <p className="mt-1 max-w-2xl text-sm text-gray-500">Information about the signatory.</p>
+                            </div>
+                            {!isEditingSignatory && (
+                                <button
+                                    onClick={() => {
+                                        setIsEditingSignatory(true);
+                                        setSignatoryEditData({
+                                            name: subscription.subscription_signatories?.name || '',
+                                            designation: subscription.subscription_signatories?.designation || '',
+                                            aadhaar_number: subscription.subscription_signatories?.aadhaar_number || '',
+                                            address: subscription.subscription_signatories?.address || '',
+                                        });
+                                        setCompanyEditData({
+                                            name: subscription.subscription_companies?.name || '',
+                                            address: subscription.subscription_companies?.address || '',
+                                            cin: subscription.subscription_companies?.cin || '',
+                                            pan: subscription.subscription_companies?.pan || '',
+                                            tan: subscription.subscription_companies?.tan || '',
+                                        });
+                                    }}
+                                    className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                >
+                                    Edit
+                                </button>
+                            )}
                         </div>
                         <div className="border-t border-gray-100">
-                            <dl className="divide-y divide-gray-100">
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Type</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
-                                            {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
-                                        </span>
-                                    </dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Name</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                        <p className="font-semibold">{subscription.subscription_signatories?.name || '-'}</p>
-                                        {subscription.subscription_signatories?.designation && (
-                                            <p className="text-gray-500 text-xs mt-1">Designation: {subscription.subscription_signatories.designation}</p>
-                                        )}
-                                    </dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Aadhaar Number</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.aadhaar_number || '-'}</dd>
-                                </div>
-                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Address</dt>
-                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.address || '-'}</dd>
-                                </div>
-                                {subscription.signatory_type === 'company' && (
-                                    <>
-                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
-                                            <dt className="text-sm font-medium text-gray-900">Company Name</dt>
-                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-semibold">{subscription.subscription_companies?.name || '-'}</dd>
+                            {!isEditingSignatory ? (
+                                <dl className="divide-y divide-gray-100">
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Type</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
+                                                {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
+                                            </span>
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Name</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            <p className="font-semibold">{subscription.subscription_signatories?.name || '-'}</p>
+                                            {subscription.subscription_signatories?.designation && (
+                                                <p className="text-gray-500 text-xs mt-1">Designation: {subscription.subscription_signatories.designation}</p>
+                                            )}
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Aadhaar Number</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.aadhaar_number || '-'}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Address</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.address || '-'}</dd>
+                                    </div>
+                                    {subscription.signatory_type === 'company' && (
+                                        <>
+                                            <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
+                                                <dt className="text-sm font-medium text-gray-900">Company Name</dt>
+                                                <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-semibold">{subscription.subscription_companies?.name || '-'}</dd>
+                                            </div>
+                                            <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
+                                                <dt className="text-sm font-medium text-gray-900">Company Address</dt>
+                                                <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.address || '-'}</dd>
+                                            </div>
+                                        </>
+                                    )}
+                                </dl>
+                            ) : (
+                                <div className="p-6 space-y-6">
+                                    {/* Signatory Fields */}
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Name</label>
+                                            <input
+                                                type="text"
+                                                value={signatoryEditData.name || ''}
+                                                onChange={(e) => setSignatoryEditData({ ...signatoryEditData, name: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
                                         </div>
-                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
-                                            <dt className="text-sm font-medium text-gray-900">Company Address</dt>
-                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.address || '-'}</dd>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Designation</label>
+                                            <input
+                                                type="text"
+                                                value={signatoryEditData.designation || ''}
+                                                onChange={(e) => setSignatoryEditData({ ...signatoryEditData, designation: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
                                         </div>
-                                    </>
-                                )}
-                            </dl>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                                            <input
+                                                type="text"
+                                                value={signatoryEditData.aadhaar_number || ''}
+                                                onChange={(e) => setSignatoryEditData({ ...signatoryEditData, aadhaar_number: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Aadhaar File</label>
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)}
+                                                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                            />
+                                            {aadhaarFile && <p className="mt-1 text-xs text-gray-500">{aadhaarFile.name}</p>}
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700">Address</label>
+                                            <textarea
+                                                rows={3}
+                                                value={signatoryEditData.address || ''}
+                                                onChange={(e) => setSignatoryEditData({ ...signatoryEditData, address: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Company Fields (if company type) */}
+                                    {subscription.signatory_type === 'company' && (
+                                        <div className="border-t border-gray-200 pt-6">
+                                            <h4 className="text-sm font-medium text-gray-900 mb-4">Company Details</h4>
+                                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={companyEditData.name || ''}
+                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, name: e.target.value })}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">CIN</label>
+                                                    <input
+                                                        type="text"
+                                                        value={companyEditData.cin || ''}
+                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, cin: e.target.value })}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">PAN</label>
+                                                    <input
+                                                        type="text"
+                                                        value={companyEditData.pan || ''}
+                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, pan: e.target.value })}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">TAN</label>
+                                                    <input
+                                                        type="text"
+                                                        value={companyEditData.tan || ''}
+                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, tan: e.target.value })}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">COI File</label>
+                                                    <input
+                                                        type="file"
+                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                        onChange={(e) => setCoiFile(e.target.files?.[0] || null)}
+                                                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                                    />
+                                                    {coiFile && <p className="mt-1 text-xs text-gray-500">{coiFile.name}</p>}
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700">Company Address</label>
+                                                    <textarea
+                                                        rows={3}
+                                                        value={companyEditData.address || ''}
+                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, address: e.target.value })}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                        <button
+                                            onClick={() => {
+                                                setIsEditingSignatory(false);
+                                                setAadhaarFile(null);
+                                                setCoiFile(null);
+                                            }}
+                                            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleSaveSignatory}
+                                            disabled={updating}
+                                            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                                        >
+                                            {updating ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
