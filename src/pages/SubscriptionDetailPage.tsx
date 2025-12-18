@@ -45,6 +45,10 @@ export default function SubscriptionDetailPage() {
     const [infoEditData, setInfoEditData] = useState<any>({});
     const [userSearchQuery, setUserSearchQuery] = useState('');
 
+    // Documents Edit State
+    const [isEditingDocuments, setIsEditingDocuments] = useState(false);
+    const [documentsEditData, setDocumentsEditData] = useState<any>({});
+
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
@@ -1020,6 +1024,183 @@ export default function SubscriptionDetailPage() {
                                             onClick={handleSaveSignatory}
                                             disabled={updating}
                                             className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                                        >
+                                            {updating ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Documents Card */}
+                    <div className="overflow-hidden bg-white shadow sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Documents</h3>
+                            </div>
+                            {!isEditingDocuments && (
+                                <button
+                                    onClick={() => {
+                                        setIsEditingDocuments(true);
+                                        setDocumentsEditData({
+                                            br_pdf_url: subscription.br_pdf_url || '',
+                                            br_doc_url: subscription.br_doc_url || '',
+                                            ll_pdf_url: subscription.ll_pdf_url || '',
+                                            ll_doc_url: subscription.ll_doc_url || '',
+                                        });
+                                    }}
+                                    className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                >
+                                    Edit
+                                </button>
+                            )}
+                        </div>
+                        <div className="border-t border-gray-100">
+                            {!isEditingDocuments ? (
+                                <dl className="divide-y divide-gray-100">
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">BR NOC PDF</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            {subscription.br_pdf_url ? (
+                                                <a
+                                                    href={subscription.br_pdf_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 hover:bg-blue-100 cursor-pointer transition-colors"
+                                                >
+                                                    <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    View PDF
+                                                </a>
+                                            ) : '-'}
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">BR NOC Document</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            {subscription.br_doc_url ? (
+                                                <a
+                                                    href={subscription.br_doc_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center rounded-md bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 ring-1 ring-inset ring-green-700/10 hover:bg-green-100 cursor-pointer transition-colors"
+                                                >
+                                                    <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    View Document
+                                                </a>
+                                            ) : '-'}
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">License Agreement PDF</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            {subscription.ll_pdf_url ? (
+                                                <a
+                                                    href={subscription.ll_pdf_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 hover:bg-purple-100 cursor-pointer transition-colors"
+                                                >
+                                                    <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    View PDF
+                                                </a>
+                                            ) : '-'}
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">License Agreement Document</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            {subscription.ll_doc_url ? (
+                                                <a
+                                                    href={subscription.ll_doc_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center rounded-md bg-orange-50 px-3 py-1.5 text-sm font-medium text-orange-700 ring-1 ring-inset ring-orange-700/10 hover:bg-orange-100 cursor-pointer transition-colors"
+                                                >
+                                                    <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    View Document
+                                                </a>
+                                            ) : '-'}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            ) : (
+                                <div className="p-6 space-y-6">
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">BR NOC PDF URL</label>
+                                            <input
+                                                type="url"
+                                                value={documentsEditData.br_pdf_url || ''}
+                                                onChange={(e) => setDocumentsEditData({ ...documentsEditData, br_pdf_url: e.target.value })}
+                                                placeholder="https://..."
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">BR NOC Document URL</label>
+                                            <input
+                                                type="url"
+                                                value={documentsEditData.br_doc_url || ''}
+                                                onChange={(e) => setDocumentsEditData({ ...documentsEditData, br_doc_url: e.target.value })}
+                                                placeholder="https://..."
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">License Agreement PDF URL</label>
+                                            <input
+                                                type="url"
+                                                value={documentsEditData.ll_pdf_url || ''}
+                                                onChange={(e) => setDocumentsEditData({ ...documentsEditData, ll_pdf_url: e.target.value })}
+                                                placeholder="https://..."
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">License Agreement Document URL</label>
+                                            <input
+                                                type="url"
+                                                value={documentsEditData.ll_doc_url || ''}
+                                                onChange={(e) => setDocumentsEditData({ ...documentsEditData, ll_doc_url: e.target.value })}
+                                                placeholder="https://..."
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                        <button
+                                            onClick={() => setIsEditingDocuments(false)}
+                                            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                setUpdating(true);
+                                                try {
+                                                    await updateSubscription(id!, documentsEditData);
+                                                    addToast('Documents updated successfully', 'success');
+                                                    setIsEditingDocuments(false);
+                                                    fetchData();
+                                                } catch (error: any) {
+                                                    console.error(error);
+                                                    addToast(error.message || 'Failed to update documents', 'error');
+                                                } finally {
+                                                    setUpdating(false);
+                                                }
+                                            }}
+                                            disabled={updating}
+                                            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
                                         >
                                             {updating ? 'Saving...' : 'Save Changes'}
                                         </button>

@@ -74,11 +74,21 @@ export interface Subscription {
     status: SubscriptionStatus;
     suite_number?: string;
     rubber_stamp?: RubberStampStatus;
+    name_board?: NameBoardStatus;
     signatory_type?: SignatoryType;
     created_at?: string;
+    // New fields
+    activities?: string[];
+    br_pdf_url?: string;
+    br_doc_url?: string;
+    ll_pdf_url?: string;
+    ll_doc_url?: string;
+    drive_folder_url?: string;
     // Relations
     subscription_signatories?: SubscriptionSignatory;
     subscription_companies?: SubscriptionCompany;
+    users?: User;
+    plans?: Plan;
 }
 
 export interface SubscriptionLog {
