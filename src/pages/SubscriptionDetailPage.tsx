@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany } from '../services/api';
 import type { SubscriptionStatus, RubberStampStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
 import { useToast } from '../hooks/useToast';
+import { supabase } from '../services/supabase';
 
 interface Log {
     id: string;
@@ -223,22 +224,30 @@ export default function SubscriptionDetailPage() {
         if (!id) return;
         setUpdating(true);
         try {
-            // 1. Update Signatory Data
-            await updateSubscriptionSignatory(id, signatoryEditData);
+            // Prepare signatory updates
+            const signatoryUpdates: any = { ...signatoryEditData };
+            const companyUpdates: any = { ...companyEditData };
 
-            // 2. Update Company Data if company type
-            if (subscription.signatory_type === 'company') {
-                await updateSubscriptionCompany(id, companyEditData);
-            }
-
-            // 3. Upload Aadhaar file if provided
+            // 1. Upload Aadhaar file if provided and update signatory data with file info
             if (aadhaarFile) {
-                await uploadSubscriptionFile(id, aadhaarFile, 'Signatory Aadhaar');
+                const uploadedFile = await uploadSubscriptionFile(id, aadhaarFile, 'Signatory Aadhaar');
+                signatoryUpdates.aadhaar_file_path = uploadedFile.file_path;
+                signatoryUpdates.aadhaar_file_name = uploadedFile.file_name;
             }
 
-            // 4. Upload COI file if provided
-            if (coiFile) {
-                await uploadSubscriptionFile(id, coiFile, 'Certificate of Incorporation');
+            // 2. Upload COI file if provided and update company data with file info
+            if (coiFile && subscription.signatory_type === 'company') {
+                const uploadedFile = await uploadSubscriptionFile(id, coiFile, 'Certificate of Incorporation');
+                companyUpdates.coi_file_path = uploadedFile.file_path;
+                companyUpdates.coi_file_name = uploadedFile.file_name;
+            }
+
+            // 3. Update Signatory Data
+            await updateSubscriptionSignatory(id, signatoryUpdates);
+
+            // 4. Update Company Data if company type
+            if (subscription.signatory_type === 'company') {
+                await updateSubscriptionCompany(id, companyUpdates);
             }
 
             addToast('Signatory details updated successfully', 'success');
@@ -435,6 +444,31 @@ export default function SubscriptionDetailPage() {
                                         <dt className="text-sm font-medium text-gray-900">Address</dt>
                                         <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.address || '-'}</dd>
                                     </div>
+                                    {subscription.subscription_signatories?.aadhaar_file_name && (
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Aadhaar File</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                <a
+                                                    href="#"
+                                                    onClick={async (e) => {
+                                                        e.preventDefault();
+                                                        const { data } = await supabase.storage
+                                                            .from('kommonspace')
+                                                            .createSignedUrl(subscription.subscription_signatories!.aadhaar_file_path!, 3600);
+                                                        if (data?.signedUrl) {
+                                                            window.open(data.signedUrl, '_blank');
+                                                        }
+                                                    }}
+                                                    className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    {subscription.subscription_signatories.aadhaar_file_name}
+                                                </a>
+                                            </dd>
+                                        </div>
+                                    )}
                                     {subscription.signatory_type === 'company' && (
                                         <>
                                             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
@@ -445,6 +479,31 @@ export default function SubscriptionDetailPage() {
                                                 <dt className="text-sm font-medium text-gray-900">Company Address</dt>
                                                 <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.address || '-'}</dd>
                                             </div>
+                                            {subscription.subscription_companies?.coi_file_name && (
+                                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
+                                                    <dt className="text-sm font-medium text-gray-900">COI File</dt>
+                                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                        <a
+                                                            href="#"
+                                                            onClick={async (e) => {
+                                                                e.preventDefault();
+                                                                const { data } = await supabase.storage
+                                                                    .from('kommonspace')
+                                                                    .createSignedUrl(subscription.subscription_companies!.coi_file_path!, 3600);
+                                                                if (data?.signedUrl) {
+                                                                    window.open(data.signedUrl, '_blank');
+                                                                }
+                                                            }}
+                                                            className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                            {subscription.subscription_companies.coi_file_name}
+                                                        </a>
+                                                    </dd>
+                                                </div>
+                                            )}
                                         </>
                                     )}
                                 </dl>
