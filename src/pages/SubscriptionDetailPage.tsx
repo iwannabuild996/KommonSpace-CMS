@@ -1513,116 +1513,117 @@ export default function SubscriptionDetailPage() {
                 </div>
             </div>
             {/* Extracted Data Modal */}
-            {viewingData && (
-                <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setViewingData(null)} />
+            {
+                viewingData && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                        <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setViewingData(null)} />
 
-                        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
-                            <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                                        <h3 className="text-lg font-semibold leading-6 text-gray-900 mb-4">Extracted Data</h3>
+                            <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
+                                <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                                    <div className="sm:flex sm:items-start">
+                                        <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                            <h3 className="text-lg font-semibold leading-6 text-gray-900 mb-4">Extracted Data</h3>
 
-                                        {editedData ? (
-                                            <div className="space-y-4">
-                                                {/* Common / Aadhaar Fields */}
-                                                {editedData.name !== undefined && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Name</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                            value={editedData.name || ''}
-                                                            onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {editedData.aadhaar_number !== undefined && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Aadhaar Number</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                            value={editedData.aadhaar_number || ''}
-                                                            onChange={(e) => setEditedData({ ...editedData, aadhaar_number: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
+                                            {editedData ? (
+                                                <div className="space-y-4">
+                                                    {/* Common / Aadhaar Fields */}
+                                                    {editedData.name !== undefined && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">Name</label>
+                                                            <input
+                                                                type="text"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                                value={editedData.name || ''}
+                                                                onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {editedData.aadhaar_number !== undefined && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">Aadhaar Number</label>
+                                                            <input
+                                                                type="text"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                                value={editedData.aadhaar_number || ''}
+                                                                onChange={(e) => setEditedData({ ...editedData, aadhaar_number: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
 
-                                                {/* COI Fields */}
-                                                {editedData.company_name !== undefined && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Company Name</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                            value={editedData.company_name || ''}
-                                                            onChange={(e) => setEditedData({ ...editedData, company_name: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {editedData.cin !== undefined && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">CIN</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                            value={editedData.cin || ''}
-                                                            onChange={(e) => setEditedData({ ...editedData, cin: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {editedData.pan !== undefined && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">PAN</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                            value={editedData.pan || ''}
-                                                            onChange={(e) => setEditedData({ ...editedData, pan: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {editedData.tan !== undefined && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">TAN</label>
-                                                        <input
-                                                            type="text"
-                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                            value={editedData.tan || ''}
-                                                            onChange={(e) => setEditedData({ ...editedData, tan: e.target.value })}
-                                                        />
-                                                    </div>
-                                                )}
+                                                    {/* COI Fields */}
+                                                    {editedData.company_name !== undefined && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                                            <input
+                                                                type="text"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                                value={editedData.company_name || ''}
+                                                                onChange={(e) => setEditedData({ ...editedData, company_name: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {editedData.cin !== undefined && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">CIN</label>
+                                                            <input
+                                                                type="text"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                                value={editedData.cin || ''}
+                                                                onChange={(e) => setEditedData({ ...editedData, cin: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {editedData.pan !== undefined && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">PAN</label>
+                                                            <input
+                                                                type="text"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                                value={editedData.pan || ''}
+                                                                onChange={(e) => setEditedData({ ...editedData, pan: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {editedData.tan !== undefined && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">TAN</label>
+                                                            <input
+                                                                type="text"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                                value={editedData.tan || ''}
+                                                                onChange={(e) => setEditedData({ ...editedData, tan: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
 
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Address</label>
-                                                    <textarea
-                                                        rows={4}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
-                                                        value={editedData.address || ''}
-                                                        onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
-                                                    />
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">Address</label>
+                                                        <textarea
+                                                            rows={4}
+                                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                                            value={editedData.address || ''}
+                                                            onChange={(e) => setEditedData({ ...editedData, address: e.target.value })}
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <p className="text-gray-500 italic">No data available.</p>
-                                        )}
+                                            ) : (
+                                                <p className="text-gray-500 italic">No data available.</p>
+                                            )}
 
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="bg-gray-50 px-4 py-3 sm:flex sm:justify-between sm:px-6">
-                                <div className="mt-3 sm:mt-0">
-                                    <button
-                                        type="button"
-                                        className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
-                                        onClick={() => {
-                                            const name = editedData?.name || '';
-                                            const address = editedData?.address || '';
+                                <div className="bg-gray-50 px-4 py-3 sm:flex sm:justify-between sm:px-6">
+                                    <div className="mt-3 sm:mt-0">
+                                        <button
+                                            type="button"
+                                            className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
+                                            onClick={() => {
+                                                const name = editedData?.name || '';
+                                                const address = editedData?.address || '';
 
-                                            const text = `500 Rupees Stamp Paper
+                                                const text = `500 Rupees Stamp Paper
 
 First Party
 Director - Muhammed Shajar C
@@ -1633,99 +1634,102 @@ Second Party
 ${name}
 ${address}`;
 
-                                            navigator.clipboard.writeText(text).then(() => {
-                                                addToast('Copied Agreement Parties to clipboard', 'success');
-                                            }).catch(err => {
-                                                console.error('Failed to copy', err);
-                                                addToast('Failed to copy to clipboard', 'error');
-                                            });
-                                        }}
-                                    >
-                                        Agreement Parties
-                                    </button>
-                                </div>
-                                <div className="sm:flex sm:flex-row-reverse gap-2">
-                                    <button
-                                        type="button"
-                                        className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:w-auto disabled:opacity-50"
-                                        onClick={handleUpdateExtractedData}
-                                        disabled={extracting === viewingData.id}
-                                    >
-                                        {extracting === viewingData.id ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                                        onClick={async () => {
-                                            await handleExtractData(viewingData);
-                                        }}
-                                        disabled={extracting === viewingData.id}
-                                    >
-                                        Re-extract
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                                        onClick={() => setViewingData(null)}
-                                    >
-                                        Cancel
-                                    </button>
+                                                navigator.clipboard.writeText(text).then(() => {
+                                                    addToast('Copied Agreement Parties to clipboard', 'success');
+                                                }).catch(err => {
+                                                    console.error('Failed to copy', err);
+                                                    addToast('Failed to copy to clipboard', 'error');
+                                                });
+                                            }}
+                                        >
+                                            Agreement Parties
+                                        </button>
+                                    </div>
+                                    <div className="sm:flex sm:flex-row-reverse gap-2">
+                                        <button
+                                            type="button"
+                                            className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:w-auto disabled:opacity-50"
+                                            onClick={handleUpdateExtractedData}
+                                            disabled={extracting === viewingData.id}
+                                        >
+                                            {extracting === viewingData.id ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                            onClick={async () => {
+                                                await handleExtractData(viewingData);
+                                            }}
+                                            disabled={extracting === viewingData.id}
+                                        >
+                                            Re-extract
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                            onClick={() => setViewingData(null)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Confirmation Modal */}
-            {showConfirmModal && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Action</h3>
-                        <p className="text-sm text-gray-600 mb-4">{confirmMessage}</p>
+            {
+                showConfirmModal && (
+                    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Action</h3>
+                            <p className="text-sm text-gray-600 mb-4">{confirmMessage}</p>
 
-                        {/* Display extracted data if available */}
-                        {extractedDataPreview && (
-                            <div className="bg-gray-50 rounded-md p-4 mb-4 max-h-64 overflow-y-auto">
-                                <h4 className="text-sm font-semibold text-gray-900 mb-2">Extracted Data:</h4>
-                                <dl className="space-y-2">
-                                    {Object.entries(extractedDataPreview).map(([key, value]) => (
-                                        <div key={key} className="flex justify-between text-sm">
-                                            <dt className="font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</dt>
-                                            <dd className="text-gray-900 ml-2">{String(value)}</dd>
-                                        </div>
-                                    ))}
-                                </dl>
+                            {/* Display extracted data if available */}
+                            {extractedDataPreview && (
+                                <div className="bg-gray-50 rounded-md p-4 mb-4 max-h-64 overflow-y-auto">
+                                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Extracted Data:</h4>
+                                    <dl className="space-y-2">
+                                        {Object.entries(extractedDataPreview).map(([key, value]) => (
+                                            <div key={key} className="flex justify-between text-sm">
+                                                <dt className="font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</dt>
+                                                <dd className="text-gray-900 ml-2">{String(value)}</dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowConfirmModal(false);
+                                        setConfirmAction(null);
+                                        setExtractedDataPreview(null);
+                                    }}
+                                    className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowConfirmModal(false);
+                                        if (confirmAction) {
+                                            confirmAction();
+                                        }
+                                        setConfirmAction(null);
+                                    }}
+                                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                                >
+                                    Confirm
+                                </button>
                             </div>
-                        )}
-
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    setConfirmAction(null);
-                                    setExtractedDataPreview(null);
-                                }}
-                                className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    if (confirmAction) {
-                                        confirmAction();
-                                    }
-                                    setConfirmAction(null);
-                                }}
-                                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                            >
-                                Confirm
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
