@@ -1,4 +1,5 @@
--- Enums
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 CREATE TYPE subscription_status AS ENUM (
   'Advance Received',
   'Paper Collected',
@@ -17,16 +18,18 @@ CREATE TYPE signatory_type AS ENUM (
   'individual'
 );
 
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
+CREATE TYPE file_type AS ENUM (
+  'other',
+);
 
-CREATE TABLE public.admin_users (
+
+CREATE TABLE admin_users (
   user_id uuid NOT NULL,
   role text DEFAULT 'admin'::text,
   CONSTRAINT admin_users_pkey PRIMARY KEY (user_id),
   CONSTRAINT admin_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.plans (
+CREATE TABLE plans (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
   description text,
@@ -34,9 +37,53 @@ CREATE TABLE public.plans (
   features jsonb,
   status boolean DEFAULT true,
   created_at timestamp without time zone DEFAULT now(),
+  tag text,
   CONSTRAINT plans_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.subscription_companies (
+
+CREATE TABLE suite_numbers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  suite_number text NOT NULL UNIQUE,
+  status text DEFAULT 'available'::text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT suite_numbers_pkey PRIMARY KEY (id)
+);
+CREATE TABLE users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  phone text,
+  email text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE subscriptions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  plan_id uuid,
+  purchased_date date,
+  start_date date,
+  expiry_date date,
+  purchase_amount numeric,
+  received_amount numeric,
+  status subscription_status DEFAULT 'Advance Received',
+  suite_number text,
+  rubber_stamp rubber_stamp_status DEFAULT 'Not Available',
+  signatory_type signatory_type,
+  created_at timestamp without time zone DEFAULT now(),
+  name_board text DEFAULT 'Not Available'::text CHECK (name_board = ANY (ARRAY['Not Available'::text, 'Available'::text])),
+  activities text[] DEFAULT '{}'::text[],
+  br_pdf_url text,
+  br_doc_url text,
+  ll_pdf_url text,
+  ll_doc_url text,
+  drive_folder_url text,
+  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.plans(id)
+);
+
+CREATE TABLE subscription_companies (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   subscription_id uuid NOT NULL UNIQUE,
   name text,
@@ -50,10 +97,10 @@ CREATE TABLE public.subscription_companies (
   CONSTRAINT subscription_companies_pkey PRIMARY KEY (id),
   CONSTRAINT subscription_companies_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
-CREATE TABLE public.subscription_files (
+CREATE TABLE subscription_files (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   subscription_id uuid NOT NULL,
-  label USER-DEFINED NOT NULL,
+  label file_type NOT NULL,
   file_name text NOT NULL,
   file_path text NOT NULL,
   mime_type text,
@@ -64,7 +111,7 @@ CREATE TABLE public.subscription_files (
   CONSTRAINT subscription_files_pkey PRIMARY KEY (id),
   CONSTRAINT subscription_files_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
-CREATE TABLE public.subscription_signatories (
+CREATE TABLE subscription_signatories (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   subscription_id uuid NOT NULL UNIQUE,
   name text,
@@ -77,47 +124,14 @@ CREATE TABLE public.subscription_signatories (
   CONSTRAINT subscription_signatories_pkey PRIMARY KEY (id),
   CONSTRAINT subscription_signatories_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
-CREATE TABLE public.subscription_status_logs (
+CREATE TABLE subscription_status_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   subscription_id uuid,
-  old_status USER-DEFINED,
-  new_status USER-DEFINED NOT NULL,
+  old_status subscription_status,
+  new_status subscription_status NOT NULL,
   changed_by uuid,
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT subscription_status_logs_pkey PRIMARY KEY (id),
   CONSTRAINT subscription_status_logs_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id),
   CONSTRAINT subscription_status_logs_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.admin_users(user_id)
-);
-CREATE TABLE public.subscriptions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid,
-  plan_id uuid,
-  purchased_date date,
-  start_date date,
-  expiry_date date,
-  purchase_amount numeric,
-  received_amount numeric,
-  status USER-DEFINED DEFAULT 'Advance Received'::subscription_status,
-  suite_number text,
-  rubber_stamp USER-DEFINED DEFAULT 'Not Available'::rubber_stamp_status,
-  signatory_type USER-DEFINED,
-  created_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
-  CONSTRAINT subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.plans(id)
-);
-CREATE TABLE public.suite_numbers (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  suite_number text NOT NULL UNIQUE,
-  status text DEFAULT 'available'::text,
-  created_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT suite_numbers_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.users (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  phone text,
-  email text,
-  created_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT users_pkey PRIMARY KEY (id)
 );

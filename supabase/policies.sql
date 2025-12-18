@@ -19,6 +19,9 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_status_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE suite_numbers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_signatories ENABLE ROW LEVEL SECURITY;
 
 -- 3. Cleanup old policies
 DROP POLICY IF EXISTS "Allow admin access" ON users;
@@ -71,8 +74,20 @@ FOR ALL TO authenticated
 USING (is_admin());
 
 -- Subscription Files
-ALTER TABLE subscription_files ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow admin access" ON subscription_files
 FOR ALL TO authenticated
 USING (is_admin());
+
+-- Subscription Companies
+CREATE POLICY "Allow admin access" ON subscription_companies
+FOR ALL TO authenticated
+USING (is_admin());
+
+-- Subscription Signatories
+CREATE POLICY "Allow admin access" ON subscription_signatories
+FOR ALL TO authenticated
+USING (is_admin());
+
+
+
