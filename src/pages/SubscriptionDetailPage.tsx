@@ -1065,9 +1065,22 @@ export default function SubscriptionDetailPage() {
                                                             setUpdating(true);
                                                             try {
                                                                 // Extract data first
+                                                                // Find the file record to get the correct mime type
+                                                                const filePath = subscription.subscription_signatories!.aadhaar_file_path!;
+                                                                const fileRecord = files.find(f => f.file_path === filePath);
+                                                                let mimeType = fileRecord?.mime_type;
+
+                                                                // Fallback to extension if file record or mime type is missing
+                                                                if (!mimeType) {
+                                                                    const ext = filePath.split('.').pop()?.toLowerCase();
+                                                                    if (ext === 'png') mimeType = 'image/png';
+                                                                    else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+                                                                    else mimeType = 'application/pdf';
+                                                                }
+
                                                                 const extracted = await extractSubscriptionData(
-                                                                    subscription.subscription_signatories!.aadhaar_file_path!,
-                                                                    'application/pdf',
+                                                                    filePath,
+                                                                    mimeType,
                                                                     'extract-aadhaar'
                                                                 );
 
