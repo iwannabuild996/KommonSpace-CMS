@@ -35,6 +35,11 @@ export default function SubscriptionDetailPage() {
     const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
     const [coiFile, setCoiFile] = useState<File | null>(null);
 
+    // Confirmation Modal State
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+    const [confirmMessage, setConfirmMessage] = useState('');
+
     // Edit State
     const [status, setStatus] = useState<SubscriptionStatus>('Advance Received');
     const [rubberStamp, setRubberStamp] = useState<RubberStampStatus>('Not Available');
@@ -448,24 +453,65 @@ export default function SubscriptionDetailPage() {
                                         <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                                             <dt className="text-sm font-medium text-gray-900">Aadhaar File</dt>
                                             <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                                <a
-                                                    href="#"
-                                                    onClick={async (e) => {
-                                                        e.preventDefault();
-                                                        const { data } = await supabase.storage
-                                                            .from('kommonspace')
-                                                            .createSignedUrl(subscription.subscription_signatories!.aadhaar_file_path!, 3600);
-                                                        if (data?.signedUrl) {
-                                                            window.open(data.signedUrl, '_blank');
-                                                        }
-                                                    }}
-                                                    className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                    </svg>
-                                                    {subscription.subscription_signatories.aadhaar_file_name}
-                                                </a>
+                                                <div className="flex items-center gap-3">
+                                                    <a
+                                                        href="#"
+                                                        onClick={async (e) => {
+                                                            e.preventDefault();
+                                                            const { data } = await supabase.storage
+                                                                .from('kommonspace')
+                                                                .createSignedUrl(subscription.subscription_signatories!.aadhaar_file_path!, 3600);
+                                                            if (data?.signedUrl) {
+                                                                window.open(data.signedUrl, '_blank');
+                                                            }
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
+                                                    >
+                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                        </svg>
+                                                        {subscription.subscription_signatories.aadhaar_file_name}
+                                                    </a>
+                                                    <button
+                                                        onClick={() => {
+                                                            setConfirmMessage('Extract data from this Aadhaar file and update signatory details?');
+                                                            setConfirmAction(() => async () => {
+                                                                setUpdating(true);
+                                                                try {
+                                                                    const extracted = await extractSubscriptionData(
+                                                                        subscription.subscription_signatories!.aadhaar_file_path!,
+                                                                        'application/pdf',
+                                                                        'extract-aadhaar'
+                                                                    );
+                                                                    if (extracted) {
+                                                                        const updates: any = {};
+                                                                        if (extracted.name) updates.name = extracted.name;
+                                                                        if (extracted.address) updates.address = extracted.address;
+                                                                        if (extracted.aadhaar_number) updates.aadhaar_number = extracted.aadhaar_number;
+
+                                                                        if (Object.keys(updates).length > 0) {
+                                                                            await updateSubscriptionSignatory(id!, updates);
+                                                                            addToast('Data extracted and saved successfully', 'success');
+                                                                            fetchData();
+                                                                        } else {
+                                                                            addToast('No data could be extracted from the file', 'info');
+                                                                        }
+                                                                    }
+                                                                } catch (err: any) {
+                                                                    console.error(err);
+                                                                    alert('Error extracting data: ' + (err.message || 'Unknown error'));
+                                                                } finally {
+                                                                    setUpdating(false);
+                                                                }
+                                                            });
+                                                            setShowConfirmModal(true);
+                                                        }}
+                                                        disabled={updating}
+                                                        className="rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
+                                                    >
+                                                        Extract Data
+                                                    </button>
+                                                </div>
                                             </dd>
                                         </div>
                                     )}
@@ -483,24 +529,67 @@ export default function SubscriptionDetailPage() {
                                                 <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
                                                     <dt className="text-sm font-medium text-gray-900">COI File</dt>
                                                     <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                                        <a
-                                                            href="#"
-                                                            onClick={async (e) => {
-                                                                e.preventDefault();
-                                                                const { data } = await supabase.storage
-                                                                    .from('kommonspace')
-                                                                    .createSignedUrl(subscription.subscription_companies!.coi_file_path!, 3600);
-                                                                if (data?.signedUrl) {
-                                                                    window.open(data.signedUrl, '_blank');
-                                                                }
-                                                            }}
-                                                            className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
-                                                        >
-                                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                            </svg>
-                                                            {subscription.subscription_companies.coi_file_name}
-                                                        </a>
+                                                        <div className="flex items-center gap-3">
+                                                            <a
+                                                                href="#"
+                                                                onClick={async (e) => {
+                                                                    e.preventDefault();
+                                                                    const { data } = await supabase.storage
+                                                                        .from('kommonspace')
+                                                                        .createSignedUrl(subscription.subscription_companies!.coi_file_path!, 3600);
+                                                                    if (data?.signedUrl) {
+                                                                        window.open(data.signedUrl, '_blank');
+                                                                    }
+                                                                }}
+                                                                className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
+                                                            >
+                                                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                </svg>
+                                                                {subscription.subscription_companies.coi_file_name}
+                                                            </a>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setConfirmMessage('Extract data from this COI file and update company details?');
+                                                                    setConfirmAction(() => async () => {
+                                                                        setUpdating(true);
+                                                                        try {
+                                                                            const extracted = await extractSubscriptionData(
+                                                                                subscription.subscription_companies!.coi_file_path!,
+                                                                                'application/pdf',
+                                                                                'extract-coi'
+                                                                            );
+                                                                            if (extracted) {
+                                                                                const updates: any = {};
+                                                                                if (extracted.company_name) updates.name = extracted.company_name;
+                                                                                if (extracted.address) updates.address = extracted.address;
+                                                                                if (extracted.cin) updates.cin = extracted.cin;
+                                                                                if (extracted.pan) updates.pan = extracted.pan;
+                                                                                if (extracted.tan) updates.tan = extracted.tan;
+
+                                                                                if (Object.keys(updates).length > 0) {
+                                                                                    await updateSubscriptionCompany(id!, updates);
+                                                                                    addToast('Data extracted and saved successfully', 'success');
+                                                                                    fetchData();
+                                                                                } else {
+                                                                                    addToast('No data could be extracted from the file', 'info');
+                                                                                }
+                                                                            }
+                                                                        } catch (err: any) {
+                                                                            console.error(err);
+                                                                            alert('Error extracting data: ' + (err.message || 'Unknown error'));
+                                                                        } finally {
+                                                                            setUpdating(false);
+                                                                        }
+                                                                    });
+                                                                    setShowConfirmModal(true);
+                                                                }}
+                                                                disabled={updating}
+                                                                className="rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
+                                                            >
+                                                                Extract Data
+                                                            </button>
+                                                        </div>
                                                     </dd>
                                                 </div>
                                             )}
@@ -949,6 +1038,39 @@ ${address}`;
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Action</h3>
+                        <p className="text-sm text-gray-600 mb-6">{confirmMessage}</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    setConfirmAction(null);
+                                }}
+                                className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    if (confirmAction) {
+                                        confirmAction();
+                                    }
+                                    setConfirmAction(null);
+                                }}
+                                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                            >
+                                Confirm
+                            </button>
                         </div>
                     </div>
                 </div>
