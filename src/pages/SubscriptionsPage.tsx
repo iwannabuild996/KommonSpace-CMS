@@ -22,6 +22,15 @@ export default function SubscriptionsPage() {
         }
     };
 
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredSubscriptions = subscriptions.filter(sub => {
+        const query = searchQuery.toLowerCase();
+        const userName = sub.users?.name?.toLowerCase() || '';
+        const suiteNumber = sub.suite_number?.toLowerCase() || '';
+        return userName.includes(query) || suiteNumber.includes(query);
+    });
+
     useEffect(() => {
         fetchSubscriptions();
     }, []);
@@ -46,7 +55,24 @@ export default function SubscriptionsPage() {
                 </div>
             </div>
 
-            <div className="mt-8 flow-root">
+            <div className="mt-6 flex gap-4">
+                <div className="relative flex-1 max-w-md">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        placeholder="Search by customer name or suite number..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="mt-4 flow-root">
                 <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
                         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
@@ -68,12 +94,14 @@ export default function SubscriptionsPage() {
                                         <tr>
                                             <td colSpan={6} className="py-4 text-center text-sm text-gray-500">Loading...</td>
                                         </tr>
-                                    ) : subscriptions.length === 0 ? (
+                                    ) : filteredSubscriptions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="py-4 text-center text-sm text-gray-500">No subscriptions found.</td>
+                                            <td colSpan={6} className="py-4 text-center text-sm text-gray-500">
+                                                {searchQuery ? 'No matching subscriptions found.' : 'No subscriptions found.'}
+                                            </td>
                                         </tr>
                                     ) : (
-                                        subscriptions.map((sub) => (
+                                        filteredSubscriptions.map((sub) => (
                                             <tr key={sub.id}>
                                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                                                     {sub.users?.name || 'Unknown User'}
@@ -86,8 +114,8 @@ export default function SubscriptionsPage() {
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${sub.status === 'Completed' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                                                            sub.status === 'Documents Ready' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
-                                                                'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                        sub.status === 'Documents Ready' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
+                                                            'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
                                                         }`}>
                                                         {sub.status}
                                                     </span>
