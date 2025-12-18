@@ -89,5 +89,3 @@ CREATE POLICY "Allow admin access" ON subscription_signatories
 FOR ALL TO authenticated
 USING (is_admin());
 
-
--- djdjd
