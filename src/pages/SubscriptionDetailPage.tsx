@@ -385,6 +385,14 @@ export default function SubscriptionDetailPage() {
                                         <p>Received: ₹{subscription.received_amount}</p>
                                     </dd>
                                 </div>
+                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-900">Signatory Type</dt>
+                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
+                                            {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
+                                        </span>
+                                    </dd>
+                                </div>
 
                             </dl>
                         </div>
@@ -424,14 +432,6 @@ export default function SubscriptionDetailPage() {
                         <div className="border-t border-gray-100">
                             {!isEditingSignatory ? (
                                 <dl className="divide-y divide-gray-100">
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Type</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
-                                                {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
-                                            </span>
-                                        </dd>
-                                    </div>
                                     <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                                         <dt className="text-sm font-medium text-gray-900">Name</dt>
                                         <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
