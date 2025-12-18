@@ -378,9 +378,21 @@ export const uploadSubscriptionFile = async (
     file: File,
     label: SubscriptionFileLabel
 ) => {
-    // 1. Upload to Storage
-    const fileName = `${subscriptionId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = `${fileName}`;
+    // 1. Generate standardized file name based on label
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop() || 'pdf'; // Get extension or default to pdf
+
+    let standardizedName: string;
+    if (label === 'Signatory Aadhaar') {
+        standardizedName = `aadhaar_${timestamp}.${fileExtension}`;
+    } else if (label === 'Certificate of Incorporation') {
+        standardizedName = `coi_${timestamp}.${fileExtension}`;
+    } else {
+        // For other file types, use sanitized original name
+        standardizedName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    }
+
+    const filePath = `${subscriptionId}/${standardizedName}`;
 
     const { error: uploadError } = await supabase.storage
         .from('kommonspace')
