@@ -332,7 +332,7 @@ export const getSubscriptionLogs = async (subscriptionId: string) => {
 export const updateSubscriptionSignatory = async (subscriptionId: string, payload: Partial<SubscriptionSignatory>) => {
     const { data, error } = await supabase
         .from('subscription_signatories')
-        .update(payload)
+        .upsert({ ...payload, subscription_id: subscriptionId }, { onConflict: 'subscription_id' })
         .eq('subscription_id', subscriptionId)
         .select()
         .single();
@@ -345,7 +345,7 @@ export const updateSubscriptionSignatory = async (subscriptionId: string, payloa
 export const updateSubscriptionCompany = async (subscriptionId: string, payload: Partial<SubscriptionCompany>) => {
     const { data, error } = await supabase
         .from('subscription_companies')
-        .update(payload)
+        .upsert({ ...payload, subscription_id: subscriptionId }, { onConflict: 'subscription_id' })
         .eq('subscription_id', subscriptionId)
         .select()
         .single();

@@ -35,6 +35,9 @@ export default function SubscriptionDetailPage() {
     const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
     const [coiFile, setCoiFile] = useState<File | null>(null);
 
+    // Company Edit State
+    const [isEditingCompany, setIsEditingCompany] = useState(false);
+
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
@@ -232,34 +235,20 @@ export default function SubscriptionDetailPage() {
         try {
             // Prepare signatory updates
             const signatoryUpdates: any = { ...signatoryEditData };
-            const companyUpdates: any = { ...companyEditData };
 
-            // 1. Upload Aadhaar file if provided and update signatory data with file info
+            // Upload Aadhaar file if provided and update signatory data with file info
             if (aadhaarFile) {
                 const uploadedFile = await uploadSubscriptionFile(id, aadhaarFile, 'Signatory Aadhaar');
                 signatoryUpdates.aadhaar_file_path = uploadedFile.file_path;
                 signatoryUpdates.aadhaar_file_name = uploadedFile.file_name;
             }
 
-            // 2. Upload COI file if provided and update company data with file info
-            if (coiFile && subscription.signatory_type === 'company') {
-                const uploadedFile = await uploadSubscriptionFile(id, coiFile, 'Certificate of Incorporation');
-                companyUpdates.coi_file_path = uploadedFile.file_path;
-                companyUpdates.coi_file_name = uploadedFile.file_name;
-            }
-
-            // 3. Update Signatory Data
+            // Update Signatory Data
             await updateSubscriptionSignatory(id, signatoryUpdates);
-
-            // 4. Update Company Data if company type
-            if (subscription.signatory_type === 'company') {
-                await updateSubscriptionCompany(id, companyUpdates);
-            }
 
             addToast('Signatory details updated successfully', 'success');
             setIsEditingSignatory(false);
             setAadhaarFile(null);
-            setCoiFile(null);
             fetchData(); // Refresh data
         } catch (err: any) {
             console.error(err);
@@ -679,70 +668,6 @@ export default function SubscriptionDetailPage() {
                                         </div>
                                     </div>
 
-                                    {/* Company Fields (if company type) */}
-                                    {subscription.signatory_type === 'company' && (
-                                        <div className="border-t border-gray-200 pt-6">
-                                            <h4 className="text-sm font-medium text-gray-900 mb-4">Company Details</h4>
-                                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Company Name</label>
-                                                    <input
-                                                        type="text"
-                                                        value={companyEditData.name || ''}
-                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, name: e.target.value })}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">CIN</label>
-                                                    <input
-                                                        type="text"
-                                                        value={companyEditData.cin || ''}
-                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, cin: e.target.value })}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">PAN</label>
-                                                    <input
-                                                        type="text"
-                                                        value={companyEditData.pan || ''}
-                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, pan: e.target.value })}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">TAN</label>
-                                                    <input
-                                                        type="text"
-                                                        value={companyEditData.tan || ''}
-                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, tan: e.target.value })}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700">COI File</label>
-                                                    <input
-                                                        type="file"
-                                                        accept=".pdf,.jpg,.jpeg,.png"
-                                                        onChange={(e) => setCoiFile(e.target.files?.[0] || null)}
-                                                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                                                    />
-                                                    {coiFile && <p className="mt-1 text-xs text-gray-500">{coiFile.name}</p>}
-                                                </div>
-                                                <div className="sm:col-span-2">
-                                                    <label className="block text-sm font-medium text-gray-700">Company Address</label>
-                                                    <textarea
-                                                        rows={3}
-                                                        value={companyEditData.address || ''}
-                                                        onChange={(e) => setCompanyEditData({ ...companyEditData, address: e.target.value })}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* Action Buttons */}
                                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                                         <button
@@ -759,6 +684,241 @@ export default function SubscriptionDetailPage() {
                                             onClick={handleSaveSignatory}
                                             disabled={updating}
                                             className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                                        >
+                                            {updating ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Company Details Card */}
+                    <div className="overflow-hidden bg-white shadow sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Company Details</h3>
+                                <p className="mt-1 max-w-2xl text-sm text-gray-500">Information about the company.</p>
+                            </div>
+                            {!isEditingCompany && (
+                                <button
+                                    onClick={() => {
+                                        setIsEditingCompany(true);
+                                        setCompanyEditData({
+                                            name: subscription.subscription_companies?.name || '',
+                                            address: subscription.subscription_companies?.address || '',
+                                            cin: subscription.subscription_companies?.cin || '',
+                                            pan: subscription.subscription_companies?.pan || '',
+                                            tan: subscription.subscription_companies?.tan || '',
+                                        });
+                                    }}
+                                    className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                >
+                                    Edit
+                                </button>
+                            )}
+                        </div>
+                        <div className="border-t border-gray-100">
+                            {!isEditingCompany ? (
+                                <dl className="divide-y divide-gray-100">
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Company Name</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-semibold">{subscription.subscription_companies?.name || '-'}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">CIN</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.cin || '-'}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">PAN</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.pan || '-'}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">TAN</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.tan || '-'}</dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Company Address</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.address || '-'}</dd>
+                                    </div>
+                                    {subscription.subscription_companies?.coi_file_name && (
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">COI File</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                <div className="flex items-center gap-3">
+                                                    <a
+                                                        href="#"
+                                                        onClick={async (e) => {
+                                                            e.preventDefault();
+                                                            const { data } = await supabase.storage
+                                                                .from('kommonspace')
+                                                                .createSignedUrl(subscription.subscription_companies!.coi_file_path!, 3600);
+                                                            if (data?.signedUrl) {
+                                                                window.open(data.signedUrl, '_blank');
+                                                            }
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
+                                                    >
+                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                        </svg>
+                                                        {subscription.subscription_companies.coi_file_name}
+                                                    </a>
+                                                    <button
+                                                        onClick={async () => {
+                                                            setUpdating(true);
+                                                            try {
+                                                                const extracted = await extractSubscriptionData(
+                                                                    subscription.subscription_companies!.coi_file_path!,
+                                                                    'application/pdf',
+                                                                    'extract-coi'
+                                                                );
+
+                                                                if (extracted) {
+                                                                    const updates: any = {};
+                                                                    if (extracted.company_name) updates.name = extracted.company_name;
+                                                                    if (extracted.address) updates.address = extracted.address;
+                                                                    if (extracted.cin) updates.cin = extracted.cin;
+                                                                    if (extracted.pan) updates.pan = extracted.pan;
+                                                                    if (extracted.tan) updates.tan = extracted.tan;
+
+                                                                    if (Object.keys(updates).length > 0) {
+                                                                        setExtractedDataPreview(updates);
+                                                                        setConfirmMessage('Review the extracted data and confirm to update:');
+                                                                        setConfirmAction(() => async () => {
+                                                                            try {
+                                                                                await updateSubscriptionCompany(id!, updates);
+                                                                                addToast('Data extracted and saved successfully', 'success');
+                                                                                fetchData();
+                                                                                setExtractedDataPreview(null);
+                                                                            } catch (err: any) {
+                                                                                alert('Error saving data: ' + (err.message || 'Unknown error'));
+                                                                            }
+                                                                        });
+                                                                        setShowConfirmModal(true);
+                                                                    } else {
+                                                                        addToast('No data could be extracted from the file', 'info');
+                                                                    }
+                                                                }
+                                                            } catch (err: any) {
+                                                                console.error(err);
+                                                                alert('Error extracting data: ' + (err.message || 'Unknown error'));
+                                                            } finally {
+                                                                setUpdating(false);
+                                                            }
+                                                        }}
+                                                        disabled={updating}
+                                                        className="rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50 flex items-center gap-1"
+                                                    >
+                                                        {updating && (
+                                                            <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                        )}
+                                                        {updating ? 'Extracting...' : 'Extract Data'}
+                                                    </button>
+                                                </div>
+                                            </dd>
+                                        </div>
+                                    )}
+                                </dl>
+                            ) : (
+                                <div className="p-6 space-y-6">
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                            <input
+                                                type="text"
+                                                value={companyEditData.name || ''}
+                                                onChange={(e) => setCompanyEditData({ ...companyEditData, name: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">CIN</label>
+                                            <input
+                                                type="text"
+                                                value={companyEditData.cin || ''}
+                                                onChange={(e) => setCompanyEditData({ ...companyEditData, cin: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">PAN</label>
+                                            <input
+                                                type="text"
+                                                value={companyEditData.pan || ''}
+                                                onChange={(e) => setCompanyEditData({ ...companyEditData, pan: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">TAN</label>
+                                            <input
+                                                type="text"
+                                                value={companyEditData.tan || ''}
+                                                onChange={(e) => setCompanyEditData({ ...companyEditData, tan: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">COI File</label>
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => setCoiFile(e.target.files?.[0] || null)}
+                                                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                            />
+                                            {coiFile && <p className="mt-1 text-xs text-gray-500">{coiFile.name}</p>}
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700">Company Address</label>
+                                            <textarea
+                                                rows={3}
+                                                value={companyEditData.address || ''}
+                                                onChange={(e) => setCompanyEditData({ ...companyEditData, address: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                        <button
+                                            onClick={() => {
+                                                setIsEditingCompany(false);
+                                                setCoiFile(null);
+                                            }}
+                                            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                setUpdating(true);
+                                                try {
+                                                    const companyUpdates: any = { ...companyEditData };
+
+                                                    if (coiFile) {
+                                                        const uploadedFile = await uploadSubscriptionFile(id!, coiFile, 'Certificate of Incorporation');
+                                                        companyUpdates.coi_file_path = uploadedFile.file_path;
+                                                        companyUpdates.coi_file_name = uploadedFile.file_name;
+                                                    }
+
+                                                    await updateSubscriptionCompany(id!, companyUpdates);
+                                                    addToast('Company details updated successfully', 'success');
+                                                    setIsEditingCompany(false);
+                                                    setCoiFile(null);
+                                                    fetchData();
+                                                } catch (error: any) {
+                                                    console.error(error);
+                                                    addToast(error.message || 'Failed to update company details', 'error');
+                                                } finally {
+                                                    setUpdating(false);
+                                                }
+                                            }}
+                                            disabled={updating}
+                                            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
                                         >
                                             {updating ? 'Saving...' : 'Save Changes'}
                                         </button>
