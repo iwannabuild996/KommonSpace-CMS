@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers } from '../services/api';
 import type { SubscriptionStatus, RubberStampStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
@@ -21,6 +21,7 @@ export default function SubscriptionDetailPage() {
     const [logs, setLogs] = useState<Log[]>([]);
     const [files, setFiles] = useState<SubscriptionFile[]>([]);
     const [plans, setPlans] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -61,16 +62,18 @@ export default function SubscriptionDetailPage() {
         if (!id) return;
         setLoading(true);
         try {
-            const [subData, logsData, filesData, plansData] = await Promise.all([
+            const [subData, logsData, filesData, plansData, usersData] = await Promise.all([
                 getSubscription(id),
                 getSubscriptionLogs(id),
                 getSubscriptionFiles(id),
-                getPlans()
+                getPlans(),
+                getUsers()
             ]);
             setSubscription(subData);
             setLogs(logsData as any[]);
             setFiles(filesData);
             setPlans(plansData);
+            setUsers(usersData);
 
             // Initialize edit state
             if (subData) {
@@ -359,6 +362,7 @@ export default function SubscriptionDetailPage() {
                                     onClick={() => {
                                         setIsEditingInfo(true);
                                         setInfoEditData({
+                                            user_id: subscription.user_id,
                                             plan_id: subscription.plan_id,
                                             signatory_type: subscription.signatory_type,
                                             suite_number: subscription.suite_number,
@@ -417,6 +421,19 @@ export default function SubscriptionDetailPage() {
                             ) : (
                                 <div className="p-6 space-y-6">
                                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">User</label>
+                                            <select
+                                                value={infoEditData.user_id || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, user_id: e.target.value })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            >
+                                                <option value="">Select a user</option>
+                                                {users.map((user) => (
+                                                    <option key={user.id} value={user.id}>{user.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Plan</label>
                                             <select
@@ -548,13 +565,6 @@ export default function SubscriptionDetailPage() {
                                             aadhaar_number: subscription.subscription_signatories?.aadhaar_number || '',
                                             address: subscription.subscription_signatories?.address || '',
                                         });
-                                        setCompanyEditData({
-                                            name: subscription.subscription_companies?.name || '',
-                                            address: subscription.subscription_companies?.address || '',
-                                            cin: subscription.subscription_companies?.cin || '',
-                                            pan: subscription.subscription_companies?.pan || '',
-                                            tan: subscription.subscription_companies?.tan || '',
-                                        });
                                     }}
                                     className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                                 >
@@ -662,101 +672,6 @@ export default function SubscriptionDetailPage() {
                                                 </div>
                                             </dd>
                                         </div>
-                                    )}
-                                    {subscription.signatory_type === 'company' && (
-                                        <>
-                                            <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
-                                                <dt className="text-sm font-medium text-gray-900">Company Name</dt>
-                                                <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-semibold">{subscription.subscription_companies?.name || '-'}</dd>
-                                            </div>
-                                            <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
-                                                <dt className="text-sm font-medium text-gray-900">Company Address</dt>
-                                                <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.address || '-'}</dd>
-                                            </div>
-                                            {subscription.subscription_companies?.coi_file_name && (
-                                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
-                                                    <dt className="text-sm font-medium text-gray-900">COI File</dt>
-                                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                                        <div className="flex items-center gap-3">
-                                                            <a
-                                                                href="#"
-                                                                onClick={async (e) => {
-                                                                    e.preventDefault();
-                                                                    const { data } = await supabase.storage
-                                                                        .from('kommonspace')
-                                                                        .createSignedUrl(subscription.subscription_companies!.coi_file_path!, 3600);
-                                                                    if (data?.signedUrl) {
-                                                                        window.open(data.signedUrl, '_blank');
-                                                                    }
-                                                                }}
-                                                                className="text-indigo-600 hover:text-indigo-900 cursor-pointer"
-                                                                title="Download COI file"
-                                                            >
-                                                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                </svg>
-                                                            </a>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    setUpdating(true);
-                                                                    try {
-                                                                        // Extract data first
-                                                                        const extracted = await extractSubscriptionData(
-                                                                            subscription.subscription_companies!.coi_file_path!,
-                                                                            'application/pdf',
-                                                                            'extract-coi'
-                                                                        );
-
-                                                                        if (extracted) {
-                                                                            const updates: any = {};
-                                                                            if (extracted.company_name) updates.name = extracted.company_name;
-                                                                            if (extracted.address) updates.address = extracted.address;
-                                                                            if (extracted.cin) updates.cin = extracted.cin;
-                                                                            if (extracted.pan) updates.pan = extracted.pan;
-                                                                            if (extracted.tan) updates.tan = extracted.tan;
-
-                                                                            if (Object.keys(updates).length > 0) {
-                                                                                // Show extracted data for confirmation
-                                                                                setExtractedDataPreview(updates);
-                                                                                setConfirmMessage('Review the extracted data and confirm to update:');
-                                                                                setConfirmAction(() => async () => {
-                                                                                    try {
-                                                                                        await updateSubscriptionCompany(id!, updates);
-                                                                                        addToast('Data extracted and saved successfully', 'success');
-                                                                                        fetchData();
-                                                                                        setExtractedDataPreview(null);
-                                                                                    } catch (err: any) {
-                                                                                        alert('Error saving data: ' + (err.message || 'Unknown error'));
-                                                                                    }
-                                                                                });
-                                                                                setShowConfirmModal(true);
-                                                                            } else {
-                                                                                addToast('No data could be extracted from the file', 'info');
-                                                                            }
-                                                                        }
-                                                                    } catch (err: any) {
-                                                                        console.error(err);
-                                                                        alert('Error extracting data: ' + (err.message || 'Unknown error'));
-                                                                    } finally {
-                                                                        setUpdating(false);
-                                                                    }
-                                                                }}
-                                                                disabled={updating}
-                                                                className="rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50 flex items-center gap-1"
-                                                            >
-                                                                {updating && (
-                                                                    <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                    </svg>
-                                                                )}
-                                                                {updating ? 'Extracting...' : 'Extract Data'}
-                                                            </button>
-                                                        </div>
-                                                    </dd>
-                                                </div>
-                                            )}
-                                        </>
                                     )}
                                 </dl>
                             ) : (
