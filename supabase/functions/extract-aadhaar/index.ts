@@ -15,6 +15,15 @@ serve(async (req) => {
     }
 
     try {
+        // 1. Get Authorization Header
+        const authHeader = req.headers.get('Authorization')
+        if (!authHeader) {
+            return new Response(
+                JSON.stringify({ error: 'Missing authorization header' }),
+                { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+        }
+
         const { file_path, mime_type } = await req.json()
         console.log(`Received request for file: ${file_path}, mime: ${mime_type}`);
 
@@ -22,15 +31,51 @@ serve(async (req) => {
             throw new Error('Missing file_path')
         }
 
-        // 1. Initialize Supabase Client
+        // 2. Initialize Supabase Client with user's auth token
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        if (!supabaseUrl || !supabaseKey) {
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        if (!supabaseUrl || !supabaseServiceKey) {
             throw new Error('Missing Supabase configuration');
         }
-        const supabase = createClient(supabaseUrl, supabaseKey)
 
-        // 2. Download File
+        // Create client with user's auth for verification
+        const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey, {
+            global: { headers: { Authorization: authHeader } }
+        })
+
+        // 3. Verify User Authentication
+        console.log('Verifying user authentication...');
+        const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
+        if (userError || !user) {
+            console.error('Authentication failed:', userError);
+            return new Response(
+                JSON.stringify({ error: 'Unauthorized - Invalid or expired token' }),
+                { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+        }
+
+        console.log(`Authenticated user: ${user.id}`);
+
+        // 4. Verify Admin Role
+        console.log('Checking admin role...');
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        const { data: adminUser, error: adminError } = await supabase
+            .from('admin_users')
+            .select('role')
+            .eq('user_id', user.id)
+            .single()
+
+        if (adminError || !adminUser) {
+            console.error('Admin check failed:', adminError);
+            return new Response(
+                JSON.stringify({ error: 'Forbidden - Admin access required' }),
+                { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+        }
+
+        console.log(`Admin verified: ${adminUser.role}`);
+
+        // 5. Download File
         console.log(`Downloading file from storage...`);
         const { data: fileData, error: downloadError } = await supabase
             .storage
