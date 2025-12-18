@@ -327,7 +327,8 @@ export default function SubscriptionDetailPage() {
                                             start_date: subscription.start_date,
                                             expiry_date: subscription.expiry_date,
                                             purchase_amount: subscription.purchase_amount,
-                                            received_amount: subscription.received_amount
+                                            received_amount: subscription.received_amount,
+                                            activities: subscription.activities || []
                                         });
                                     }}
                                     className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
@@ -372,6 +373,24 @@ export default function SubscriptionDetailPage() {
                                             <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
                                                 {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
                                             </span>
+                                        </dd>
+                                    </div>
+                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                        <dt className="text-sm font-medium text-gray-900">Activities</dt>
+                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                            {subscription.activities && subscription.activities.length > 0 ? (
+                                                <ul className="space-y-1">
+                                                    {subscription.activities.map((activity: string, index: number) => (
+                                                        <li key={index} className="flex items-start">
+                                                            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                                                {activity}
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <span className="text-gray-500">No activities</span>
+                                            )}
                                         </dd>
                                     </div>
                                 </dl>
@@ -484,6 +503,65 @@ export default function SubscriptionDetailPage() {
                                                 onChange={(e) => setInfoEditData({ ...infoEditData, received_amount: parseFloat(e.target.value) })}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                             />
+                                        </div>
+                                    </div>
+
+                                    {/* Activities Management */}
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Activities</label>
+                                        <div className="space-y-2">
+                                            {infoEditData.activities && infoEditData.activities.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mb-2">
+                                                    {infoEditData.activities.map((activity: string, index: number) => (
+                                                        <span key={index} className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                                            {activity}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newActivities = infoEditData.activities.filter((_: string, i: number) => i !== index);
+                                                                    setInfoEditData({ ...infoEditData, activities: newActivities });
+                                                                }}
+                                                                className="text-gray-400 hover:text-gray-600"
+                                                            >
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Add new activity..."
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                                            e.preventDefault();
+                                                            const newActivity = e.currentTarget.value.trim();
+                                                            const currentActivities = infoEditData.activities || [];
+                                                            setInfoEditData({ ...infoEditData, activities: [...currentActivities, newActivity] });
+                                                            e.currentTarget.value = '';
+                                                        }
+                                                    }}
+                                                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                                        if (input && input.value.trim()) {
+                                                            const newActivity = input.value.trim();
+                                                            const currentActivities = infoEditData.activities || [];
+                                                            setInfoEditData({ ...infoEditData, activities: [...currentActivities, newActivity] });
+                                                            input.value = '';
+                                                        }
+                                                    }}
+                                                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                                                >
+                                                    Add
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 
