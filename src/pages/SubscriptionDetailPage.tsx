@@ -39,6 +39,7 @@ export default function SubscriptionDetailPage() {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
     const [confirmMessage, setConfirmMessage] = useState('');
+    const [extractedDataPreview, setExtractedDataPreview] = useState<any>(null);
 
     // Edit State
     const [status, setStatus] = useState<SubscriptionStatus>('Advance Received');
@@ -473,38 +474,47 @@ export default function SubscriptionDetailPage() {
                                                         {subscription.subscription_signatories.aadhaar_file_name}
                                                     </a>
                                                     <button
-                                                        onClick={() => {
-                                                            setConfirmMessage('Extract data from this Aadhaar file and update signatory details?');
-                                                            setConfirmAction(() => async () => {
-                                                                setUpdating(true);
-                                                                try {
-                                                                    const extracted = await extractSubscriptionData(
-                                                                        subscription.subscription_signatories!.aadhaar_file_path!,
-                                                                        'application/pdf',
-                                                                        'extract-aadhaar'
-                                                                    );
-                                                                    if (extracted) {
-                                                                        const updates: any = {};
-                                                                        if (extracted.name) updates.name = extracted.name;
-                                                                        if (extracted.address) updates.address = extracted.address;
-                                                                        if (extracted.aadhaar_number) updates.aadhaar_number = extracted.aadhaar_number;
+                                                        onClick={async () => {
+                                                            setUpdating(true);
+                                                            try {
+                                                                // Extract data first
+                                                                const extracted = await extractSubscriptionData(
+                                                                    subscription.subscription_signatories!.aadhaar_file_path!,
+                                                                    'application/pdf',
+                                                                    'extract-aadhaar'
+                                                                );
 
-                                                                        if (Object.keys(updates).length > 0) {
-                                                                            await updateSubscriptionSignatory(id!, updates);
-                                                                            addToast('Data extracted and saved successfully', 'success');
-                                                                            fetchData();
-                                                                        } else {
-                                                                            addToast('No data could be extracted from the file', 'info');
-                                                                        }
+                                                                if (extracted) {
+                                                                    const updates: any = {};
+                                                                    if (extracted.name) updates.name = extracted.name;
+                                                                    if (extracted.address) updates.address = extracted.address;
+                                                                    if (extracted.aadhaar_number) updates.aadhaar_number = extracted.aadhaar_number;
+
+                                                                    if (Object.keys(updates).length > 0) {
+                                                                        // Show extracted data for confirmation
+                                                                        setExtractedDataPreview(updates);
+                                                                        setConfirmMessage('Review the extracted data and confirm to update:');
+                                                                        setConfirmAction(() => async () => {
+                                                                            try {
+                                                                                await updateSubscriptionSignatory(id!, updates);
+                                                                                addToast('Data extracted and saved successfully', 'success');
+                                                                                fetchData();
+                                                                                setExtractedDataPreview(null);
+                                                                            } catch (err: any) {
+                                                                                alert('Error saving data: ' + (err.message || 'Unknown error'));
+                                                                            }
+                                                                        });
+                                                                        setShowConfirmModal(true);
+                                                                    } else {
+                                                                        addToast('No data could be extracted from the file', 'info');
                                                                     }
-                                                                } catch (err: any) {
-                                                                    console.error(err);
-                                                                    alert('Error extracting data: ' + (err.message || 'Unknown error'));
-                                                                } finally {
-                                                                    setUpdating(false);
                                                                 }
-                                                            });
-                                                            setShowConfirmModal(true);
+                                                            } catch (err: any) {
+                                                                console.error(err);
+                                                                alert('Error extracting data: ' + (err.message || 'Unknown error'));
+                                                            } finally {
+                                                                setUpdating(false);
+                                                            }
                                                         }}
                                                         disabled={updating}
                                                         className="rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
@@ -549,40 +559,49 @@ export default function SubscriptionDetailPage() {
                                                                 {subscription.subscription_companies.coi_file_name}
                                                             </a>
                                                             <button
-                                                                onClick={() => {
-                                                                    setConfirmMessage('Extract data from this COI file and update company details?');
-                                                                    setConfirmAction(() => async () => {
-                                                                        setUpdating(true);
-                                                                        try {
-                                                                            const extracted = await extractSubscriptionData(
-                                                                                subscription.subscription_companies!.coi_file_path!,
-                                                                                'application/pdf',
-                                                                                'extract-coi'
-                                                                            );
-                                                                            if (extracted) {
-                                                                                const updates: any = {};
-                                                                                if (extracted.company_name) updates.name = extracted.company_name;
-                                                                                if (extracted.address) updates.address = extracted.address;
-                                                                                if (extracted.cin) updates.cin = extracted.cin;
-                                                                                if (extracted.pan) updates.pan = extracted.pan;
-                                                                                if (extracted.tan) updates.tan = extracted.tan;
+                                                                onClick={async () => {
+                                                                    setUpdating(true);
+                                                                    try {
+                                                                        // Extract data first
+                                                                        const extracted = await extractSubscriptionData(
+                                                                            subscription.subscription_companies!.coi_file_path!,
+                                                                            'application/pdf',
+                                                                            'extract-coi'
+                                                                        );
 
-                                                                                if (Object.keys(updates).length > 0) {
-                                                                                    await updateSubscriptionCompany(id!, updates);
-                                                                                    addToast('Data extracted and saved successfully', 'success');
-                                                                                    fetchData();
-                                                                                } else {
-                                                                                    addToast('No data could be extracted from the file', 'info');
-                                                                                }
+                                                                        if (extracted) {
+                                                                            const updates: any = {};
+                                                                            if (extracted.company_name) updates.name = extracted.company_name;
+                                                                            if (extracted.address) updates.address = extracted.address;
+                                                                            if (extracted.cin) updates.cin = extracted.cin;
+                                                                            if (extracted.pan) updates.pan = extracted.pan;
+                                                                            if (extracted.tan) updates.tan = extracted.tan;
+
+                                                                            if (Object.keys(updates).length > 0) {
+                                                                                // Show extracted data for confirmation
+                                                                                setExtractedDataPreview(updates);
+                                                                                setConfirmMessage('Review the extracted data and confirm to update:');
+                                                                                setConfirmAction(() => async () => {
+                                                                                    try {
+                                                                                        await updateSubscriptionCompany(id!, updates);
+                                                                                        addToast('Data extracted and saved successfully', 'success');
+                                                                                        fetchData();
+                                                                                        setExtractedDataPreview(null);
+                                                                                    } catch (err: any) {
+                                                                                        alert('Error saving data: ' + (err.message || 'Unknown error'));
+                                                                                    }
+                                                                                });
+                                                                                setShowConfirmModal(true);
+                                                                            } else {
+                                                                                addToast('No data could be extracted from the file', 'info');
                                                                             }
-                                                                        } catch (err: any) {
-                                                                            console.error(err);
-                                                                            alert('Error extracting data: ' + (err.message || 'Unknown error'));
-                                                                        } finally {
-                                                                            setUpdating(false);
                                                                         }
-                                                                    });
-                                                                    setShowConfirmModal(true);
+                                                                    } catch (err: any) {
+                                                                        console.error(err);
+                                                                        alert('Error extracting data: ' + (err.message || 'Unknown error'));
+                                                                    } finally {
+                                                                        setUpdating(false);
+                                                                    }
                                                                 }}
                                                                 disabled={updating}
                                                                 className="rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
@@ -1048,12 +1067,29 @@ ${address}`;
                 <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Action</h3>
-                        <p className="text-sm text-gray-600 mb-6">{confirmMessage}</p>
+                        <p className="text-sm text-gray-600 mb-4">{confirmMessage}</p>
+
+                        {/* Display extracted data if available */}
+                        {extractedDataPreview && (
+                            <div className="bg-gray-50 rounded-md p-4 mb-4 max-h-64 overflow-y-auto">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-2">Extracted Data:</h4>
+                                <dl className="space-y-2">
+                                    {Object.entries(extractedDataPreview).map(([key, value]) => (
+                                        <div key={key} className="flex justify-between text-sm">
+                                            <dt className="font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</dt>
+                                            <dd className="text-gray-900 ml-2">{String(value)}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </div>
+                        )}
+
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => {
                                     setShowConfirmModal(false);
                                     setConfirmAction(null);
+                                    setExtractedDataPreview(null);
                                 }}
                                 className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                             >
