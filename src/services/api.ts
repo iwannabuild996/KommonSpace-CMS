@@ -35,6 +35,7 @@ export interface Plan {
     features?: Record<string, any>;
     status?: boolean;
     created_at?: string;
+    tag?: string;
 }
 
 export interface SubscriptionSignatory {

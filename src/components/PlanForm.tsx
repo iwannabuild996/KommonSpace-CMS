@@ -17,6 +17,7 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSuccess, initial
         name: '',
         description: '',
         price: '',
+        tag: '',
         features: '', // Stored as string, parsed to JSON on submit
     });
 
@@ -26,10 +27,11 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSuccess, initial
                 name: initialData.name,
                 description: initialData.description || '',
                 price: initialData.price ? initialData.price.toString() : '',
+                tag: initialData.tag || '',
                 features: initialData.features ? JSON.stringify(initialData.features, null, 2) : '',
             });
         } else {
-            setFormData({ name: '', description: '', price: '', features: '' });
+            setFormData({ name: '', description: '', price: '', tag: '', features: '' });
         }
     }, [initialData, isOpen]);
 
@@ -61,6 +63,7 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSuccess, initial
                 name: formData.name,
                 description: formData.description,
                 price: priceNum,
+                tag: formData.tag || undefined,
                 features: featuresJson,
                 status: true // Default to active
             };
@@ -131,6 +134,21 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSuccess, initial
                                         value={formData.price}
                                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                     />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="tag" className="block text-sm font-medium text-gray-700">Tag</label>
+                                    <input
+                                        type="text"
+                                        id="tag"
+                                        placeholder="e.g., CR, VR"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.tag}
+                                        onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Short code for the plan (used in document generation)
+                                    </p>
                                 </div>
 
                                 <div>
