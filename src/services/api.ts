@@ -13,6 +13,10 @@ export type RubberStampStatus =
     | 'Available'
     | 'With Client';
 
+export type NameBoardStatus =
+    | 'Not Available'
+    | 'Available';
+
 export type SignatoryType = 'company' | 'individual';
 
 export interface User {
