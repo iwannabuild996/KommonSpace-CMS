@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany } from '../services/api';
 import type { SubscriptionStatus, RubberStampStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
@@ -9,7 +9,6 @@ interface Log {
     created_at: string;
     new_status: string;
     old_status: string | null;
-    admin_users?: { name: string };
 }
 
 export default function SubscriptionDetailPage() {
@@ -28,8 +27,6 @@ export default function SubscriptionDetailPage() {
     const [viewingData, setViewingData] = useState<SubscriptionFile | null>(null); // file being viewed
     const [editedData, setEditedData] = useState<any>(null); // buffer for editing extracted data
 
-    const [error, setError] = useState<string | null>(null);
-
     // Edit State
     const [status, setStatus] = useState<SubscriptionStatus>('Advance Received');
     const [rubberStamp, setRubberStamp] = useState<RubberStampStatus>('Not Available');
@@ -41,7 +38,6 @@ export default function SubscriptionDetailPage() {
     const fetchData = async () => {
         if (!id) return;
         setLoading(true);
-        setError(null);
         try {
             const [subData, logsData, filesData] = await Promise.all([
                 getSubscription(id),
@@ -59,9 +55,7 @@ export default function SubscriptionDetailPage() {
             }
         } catch (err: any) {
             console.error(err);
-            const msg = err.message || 'Failed to load subscription details';
-            setError(msg);
-            addToast(msg, 'error');
+            addToast('Failed to load subscription details', 'error');
         } finally {
             setLoading(false);
         }
@@ -107,18 +101,37 @@ export default function SubscriptionDetailPage() {
                 // 1. Save extracted data to file record
                 await updateSubscriptionFile(file.id, { extracted_data: extracted });
 
-                // 2. Update DB Subscription Fields
-                const updates: any = {};
-                if (extracted.name) updates.signatory_name = extracted.name;
-                if (extracted.address) updates.signatory_address = extracted.address;
-                if (extracted.aadhaar_number) updates.signatory_aadhaar = extracted.aadhaar_number;
+                // 2. Update Signatory or Company table
+                if (file.label === 'Certificate of Incorporation') {
+                    // Update company data
+                    const companyUpdates: any = {};
+                    if (extracted.company_name) companyUpdates.name = extracted.company_name;
+                    if (extracted.address) companyUpdates.address = extracted.address;
+                    if (extracted.cin) companyUpdates.cin = extracted.cin;
+                    if (extracted.pan) companyUpdates.pan = extracted.pan;
+                    if (extracted.tan) companyUpdates.tan = extracted.tan;
 
-                if (Object.keys(updates).length > 0) {
-                    await updateSubscription(id!, updates);
-                    addToast('Details extracted and saved successfully', 'success');
-                    fetchData(); // Reload to show new data
+                    if (Object.keys(companyUpdates).length > 0) {
+                        await updateSubscriptionCompany(id!, companyUpdates);
+                        addToast('Company details extracted and saved successfully', 'success');
+                        fetchData();
+                    } else {
+                        addToast('Data extracted but no fields matched for update', 'info');
+                    }
                 } else {
-                    addToast('Data extracted but no fields matched for update', 'info');
+                    // Update signatory data (Aadhaar)
+                    const signatoryUpdates: any = {};
+                    if (extracted.name) signatoryUpdates.name = extracted.name;
+                    if (extracted.address) signatoryUpdates.address = extracted.address;
+                    if (extracted.aadhaar_number) signatoryUpdates.aadhaar_number = extracted.aadhaar_number;
+
+                    if (Object.keys(signatoryUpdates).length > 0) {
+                        await updateSubscriptionSignatory(id!, signatoryUpdates);
+                        addToast('Signatory details extracted and saved successfully', 'success');
+                        fetchData();
+                    } else {
+                        addToast('Data extracted but no fields matched for update', 'info');
+                    }
                 }
             }
         } catch (err: any) {
@@ -136,32 +149,39 @@ export default function SubscriptionDetailPage() {
             // 1. Update File Record
             await updateSubscriptionFile(viewingData.id, { extracted_data: editedData });
 
-            // 2. Update Subscription
-            const updates: any = {};
-            if (editedData.name) updates.signatory_name = editedData.name;
-            if (editedData.address) updates.signatory_address = editedData.address; // For Aadhaar, this is signatory address
-            if (editedData.aadhaar_number) updates.signatory_aadhaar = editedData.aadhaar_number;
+            // 2. Update Signatory or Company table based on file type
+            if (viewingData.label === 'Certificate of Incorporation') {
+                // Update company data
+                const companyUpdates: any = {};
+                if (editedData.company_name) companyUpdates.name = editedData.company_name;
+                if (editedData.address) companyUpdates.address = editedData.address;
+                if (editedData.cin) companyUpdates.cin = editedData.cin;
+                if (editedData.pan) companyUpdates.pan = editedData.pan;
+                if (editedData.tan) companyUpdates.tan = editedData.tan;
 
-            // COI Updates
-            if (editedData.company_name) updates.company_name = editedData.company_name;
-            // If it's a COI, address might map to company_address
-            // We can check the viewingData label to decide mapping if needed, but for now specific field names help.
-            // If extracted data has 'address' and it's a COI file, maybe we map to company_address?
-            // Let's rely on explicit 'company_address' field if we want to be safe, but the prompt returns 'address'.
-            // Strategy: If file label is COI, map address -> company_address.
-            if (viewingData.label === 'Certificate of Incorporation' && editedData.address) {
-                updates.company_address = editedData.address;
-                // Don't overwrite signatory_address for COI
-                delete updates.signatory_address;
-            }
-
-            if (Object.keys(updates).length > 0) {
-                await updateSubscription(id, updates);
-                addToast('Data updated and saved successfully', 'success');
-                fetchData();
-                setViewingData(null);
+                if (Object.keys(companyUpdates).length > 0) {
+                    await updateSubscriptionCompany(id, companyUpdates);
+                    addToast('Company data updated and saved successfully', 'success');
+                    fetchData();
+                    setViewingData(null);
+                } else {
+                    addToast('No valid fields to update', 'info');
+                }
             } else {
-                addToast('No valid fields to update', 'info');
+                // Update signatory data (Aadhaar)
+                const signatoryUpdates: any = {};
+                if (editedData.name) signatoryUpdates.name = editedData.name;
+                if (editedData.address) signatoryUpdates.address = editedData.address;
+                if (editedData.aadhaar_number) signatoryUpdates.aadhaar_number = editedData.aadhaar_number;
+
+                if (Object.keys(signatoryUpdates).length > 0) {
+                    await updateSubscriptionSignatory(id, signatoryUpdates);
+                    addToast('Signatory data updated and saved successfully', 'success');
+                    fetchData();
+                    setViewingData(null);
+                } else {
+                    addToast('No valid fields to update', 'info');
+                }
             }
 
         } catch (err: any) {
@@ -193,14 +213,6 @@ export default function SubscriptionDetailPage() {
     };
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading subscription details...</div>;
-
-    if (error) return (
-        <div className="p-8 text-center">
-            <h3 className="text-lg font-medium text-red-900">Error Loading Subscription</h3>
-            <p className="mt-1 text-sm text-red-700">{error}</p>
-            <button onClick={fetchData} className="mt-4 text-indigo-600 hover:text-indigo-500">Try Again</button>
-        </div>
-    );
 
     if (!subscription) return <div className="p-8 text-center text-gray-500">Subscription not found</div>;
 
@@ -317,23 +329,55 @@ export default function SubscriptionDetailPage() {
                                         <p>Received: ₹{subscription.received_amount}</p>
                                     </dd>
                                 </div>
+
+                            </dl>
+                        </div>
+                    </div>
+
+                    {/* Signatory Details Card */}
+                    <div className="overflow-hidden bg-white shadow sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6">
+                            <h3 className="text-base font-semibold leading-6 text-gray-900">Signatory Details</h3>
+                            <p className="mt-1 max-w-2xl text-sm text-gray-500">Information about the signatory.</p>
+                        </div>
+                        <div className="border-t border-gray-100">
+                            <dl className="divide-y divide-gray-100">
                                 <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                    <dt className="text-sm font-medium text-gray-900">Signatory</dt>
+                                    <dt className="text-sm font-medium text-gray-900">Type</dt>
                                     <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                        <p className="font-semibold">{subscription.signatory_name} <span className="text-gray-500 font-normal">({subscription.signatory_designation})</span></p>
-                                        <p>{subscription.signatory_type}</p>
-                                        <p>{subscription.signatory_address}</p>
-                                        {subscription.signatory_aadhaar && <p>Aadhaar: {subscription.signatory_aadhaar}</p>}
+                                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
+                                            {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
+                                        </span>
                                     </dd>
                                 </div>
+                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-900">Name</dt>
+                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                        <p className="font-semibold">{subscription.subscription_signatories?.name || '-'}</p>
+                                        {subscription.subscription_signatories?.designation && (
+                                            <p className="text-gray-500 text-xs mt-1">Designation: {subscription.subscription_signatories.designation}</p>
+                                        )}
+                                    </dd>
+                                </div>
+                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-900">Aadhaar Number</dt>
+                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.aadhaar_number || '-'}</dd>
+                                </div>
+                                <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-900">Address</dt>
+                                    <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_signatories?.address || '-'}</dd>
+                                </div>
                                 {subscription.signatory_type === 'company' && (
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Company</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                            <p className="font-semibold">{subscription.company_name}</p>
-                                            <p>{subscription.company_address}</p>
-                                        </dd>
-                                    </div>
+                                    <>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
+                                            <dt className="text-sm font-medium text-gray-900">Company Name</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-semibold">{subscription.subscription_companies?.name || '-'}</dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-gray-50">
+                                            <dt className="text-sm font-medium text-gray-900">Company Address</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.subscription_companies?.address || '-'}</dd>
+                                        </div>
+                                    </>
                                 )}
                             </dl>
                         </div>

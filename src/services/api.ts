@@ -33,6 +33,31 @@ export interface Plan {
     created_at?: string;
 }
 
+export interface SubscriptionSignatory {
+    id: string;
+    subscription_id: string;
+    name?: string;
+    designation?: string;
+    aadhaar_number?: string;
+    address?: string;
+    aadhaar_file_path?: string;
+    aadhaar_file_name?: string;
+    created_at?: string;
+}
+
+export interface SubscriptionCompany {
+    id: string;
+    subscription_id: string;
+    name?: string;
+    cin?: string;
+    pan?: string;
+    tan?: string;
+    address?: string;
+    coi_file_path?: string;
+    coi_file_name?: string;
+    created_at?: string;
+}
+
 export interface Subscription {
     id: string;
     user_id: string;
@@ -46,13 +71,10 @@ export interface Subscription {
     suite_number?: string;
     rubber_stamp?: RubberStampStatus;
     signatory_type?: SignatoryType;
-    signatory_designation?: string;
-    company_name?: string;
-    signatory_name?: string;
-    signatory_aadhaar?: string;
-    signatory_address?: string;
-    company_address?: string;
     created_at?: string;
+    // Relations
+    subscription_signatories?: SubscriptionSignatory;
+    subscription_companies?: SubscriptionCompany;
 }
 
 export interface SubscriptionLog {
@@ -132,7 +154,13 @@ export const updatePlan = async (id: string, payload: Partial<Plan>) => {
 export const getSubscriptions = async () => {
     const { data, error } = await supabase
         .from('subscriptions')
-        .select('*, users(name), plans(name)')
+        .select(`
+            *,
+            users(name),
+            plans(name),
+            subscription_signatories(*),
+            subscription_companies(*)
+        `)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -143,7 +171,13 @@ export const getSubscriptions = async () => {
 export const getSubscription = async (id: string) => {
     const { data, error } = await supabase
         .from('subscriptions')
-        .select('*, users(name), plans(name)')
+        .select(`
+            *,
+            users(name),
+            plans(name),
+            subscription_signatories(*),
+            subscription_companies(*)
+        `)
         .eq('id', id)
         .single();
 
@@ -154,10 +188,24 @@ export const getSubscription = async (id: string) => {
 // 5. Create Subscription (Mock Transaction)
 // NOTE: For true atomicity, use a Supabase RPC function. Here we chain calls.
 export const createSubscription = async (
-    payload: Omit<Subscription, 'id' | 'created_at' | 'status'> & { status?: SubscriptionStatus }
+    payload: any // Accept any payload from form, we'll extract what we need
 ) => {
     const initialStatus: SubscriptionStatus = payload.status || 'Advance Received';
-    const subscriptionData = { ...payload, status: initialStatus };
+
+    // Extract subscription-only fields
+    const subscriptionData = {
+        user_id: payload.user_id,
+        plan_id: payload.plan_id,
+        purchased_date: payload.purchased_date,
+        start_date: payload.start_date,
+        expiry_date: payload.expiry_date,
+        purchase_amount: payload.purchase_amount,
+        received_amount: payload.received_amount,
+        status: initialStatus,
+        suite_number: payload.suite_number,
+        rubber_stamp: payload.rubber_stamp,
+        signatory_type: payload.signatory_type,
+    };
 
     // Step A: Insert Subscription
     const { data: sub, error: subError } = await supabase
@@ -169,22 +217,58 @@ export const createSubscription = async (
     if (subError) throw subError;
     if (!sub) throw new Error('Failed to create subscription');
 
-    // Step B: Insert Log
+    // Step B: Insert Signatory Data
+    const signatoryData = {
+        subscription_id: sub.id,
+        name: payload.signatory_name,
+        designation: payload.signatory_designation,
+        aadhaar_number: payload.signatory_aadhaar,
+        address: payload.signatory_address,
+    };
+
+    const { error: signatoryError } = await supabase
+        .from('subscription_signatories')
+        .insert(signatoryData);
+
+    if (signatoryError) {
+        console.error('Failed to create signatory:', signatoryError);
+        // Optionally rollback subscription
+        await supabase.from('subscriptions').delete().eq('id', sub.id);
+        throw new Error('Failed to create signatory data');
+    }
+
+    // Step C: Insert Company Data (if company signatory)
+    if (payload.signatory_type === 'company' && payload.company_name) {
+        const companyData = {
+            subscription_id: sub.id,
+            name: payload.company_name,
+            address: payload.company_address,
+        };
+
+        const { error: companyError } = await supabase
+            .from('subscription_companies')
+            .insert(companyData);
+
+        if (companyError) {
+            console.error('Failed to create company:', companyError);
+            // Optionally rollback
+            await supabase.from('subscription_signatories').delete().eq('subscription_id', sub.id);
+            await supabase.from('subscriptions').delete().eq('id', sub.id);
+            throw new Error('Failed to create company data');
+        }
+    }
+
+    // Step D: Insert Log
     const { error: logError } = await supabase
         .from('subscription_status_logs')
         .insert({
             subscription_id: sub.id,
             old_status: null,
             new_status: initialStatus,
-            // changed_by: ??? // Admin ID would typically come from auth context
         });
 
-    // If log insertion fails, we arguably have a data inconsistency.
-    // In a production app without RPC, we might try to revert the subscription or log the error.
     if (logError) {
         console.error('Failed to create initial status log:', logError);
-        // Optional: rollback subscription?
-        // await supabase.from('subscriptions').delete().eq('id', sub.id);
     }
 
     return sub as Subscription;
@@ -236,15 +320,38 @@ export const updateSubscription = async (id: string, payload: Partial<Subscripti
 export const getSubscriptionLogs = async (subscriptionId: string) => {
     const { data, error } = await supabase
         .from('subscription_status_logs')
-        .select(`
-      *
-    `)
+        .select('*')
         .eq('subscription_id', subscriptionId)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
-    // admin name fetch removed as column is missing; layout can imply "Admin" or fetch differently if needed
     return data as SubscriptionLog[];
+};
+
+// 7.5 Update Subscription Signatory
+export const updateSubscriptionSignatory = async (subscriptionId: string, payload: Partial<SubscriptionSignatory>) => {
+    const { data, error } = await supabase
+        .from('subscription_signatories')
+        .update(payload)
+        .eq('subscription_id', subscriptionId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as SubscriptionSignatory;
+};
+
+// 7.6 Update Subscription Company
+export const updateSubscriptionCompany = async (subscriptionId: string, payload: Partial<SubscriptionCompany>) => {
+    const { data, error } = await supabase
+        .from('subscription_companies')
+        .update(payload)
+        .eq('subscription_id', subscriptionId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as SubscriptionCompany;
 };
 
 // --- File Handling ---

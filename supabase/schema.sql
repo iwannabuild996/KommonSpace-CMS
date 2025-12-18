@@ -17,95 +17,107 @@ CREATE TYPE signatory_type AS ENUM (
   'individual'
 );
 
--- USERS TABLE
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  phone TEXT,
-  email TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.admin_users (
+  user_id uuid NOT NULL,
+  role text DEFAULT 'admin'::text,
+  CONSTRAINT admin_users_pkey PRIMARY KEY (user_id),
+  CONSTRAINT admin_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- PLANS TABLE
-CREATE TABLE plans (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  description TEXT,
-  price NUMERIC,
-  features JSONB,
-  status BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.plans (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  price numeric,
+  features jsonb,
+  status boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT plans_pkey PRIMARY KEY (id)
 );
-
--- ADMIN USERS (LOGIN ACCOUNTS)
-CREATE TABLE admin_users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role text DEFAULT 'admin'
+CREATE TABLE public.subscription_companies (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subscription_id uuid NOT NULL UNIQUE,
+  name text,
+  cin text,
+  pan text,
+  tan text,
+  address text,
+  created_at timestamp without time zone DEFAULT now(),
+  coi_file_path text,
+  coi_file_name text,
+  CONSTRAINT subscription_companies_pkey PRIMARY KEY (id),
+  CONSTRAINT subscription_companies_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
-
--- SUBSCRIPTIONS TABLE
-CREATE TABLE subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  plan_id UUID REFERENCES plans(id) ON DELETE SET NULL,
-
-  purchased_date DATE,
-  start_date DATE,
-  expiry_date DATE,
-
-  purchase_amount NUMERIC,
-  received_amount NUMERIC,
-
-  status subscription_status DEFAULT 'Advance Received',
-  suite_number TEXT,
-  rubber_stamp rubber_stamp_status DEFAULT 'Not Available',
-
-  -- Signatory details
-  signatory_type signatory_type,
-  signatory_designation TEXT,
-  company_name TEXT,
-  signatory_name TEXT,
-  signatory_aadhaar TEXT,
-  signatory_address TEXT,
-  company_address TEXT,
-
-  created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.subscription_files (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subscription_id uuid NOT NULL,
+  label USER-DEFINED NOT NULL,
+  file_name text NOT NULL,
+  file_path text NOT NULL,
+  mime_type text,
+  file_size_bytes bigint,
+  uploaded_by uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  extracted_data jsonb,
+  CONSTRAINT subscription_files_pkey PRIMARY KEY (id),
+  CONSTRAINT subscription_files_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
-
--- SUBSCRIPTION STATUS LOGS
-CREATE TABLE subscription_status_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  subscription_id UUID REFERENCES subscriptions(id) ON DELETE CASCADE,
-  old_status subscription_status,
-  new_status subscription_status NOT NULL,
-  changed_by UUID REFERENCES admin_users(id),
-  created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.subscription_signatories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subscription_id uuid NOT NULL UNIQUE,
+  name text,
+  designation text,
+  aadhaar_number text,
+  address text,
+  created_at timestamp without time zone DEFAULT now(),
+  aadhaar_file_path text,
+  aadhaar_file_name text,
+  CONSTRAINT subscription_signatories_pkey PRIMARY KEY (id),
+  CONSTRAINT subscription_signatories_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
-
--- Optional: SUITE NUMBERS TABLE
-CREATE TABLE suite_numbers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  suite_number TEXT UNIQUE NOT NULL,
-  status TEXT DEFAULT 'available',
-  created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.subscription_status_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subscription_id uuid,
+  old_status USER-DEFINED,
+  new_status USER-DEFINED NOT NULL,
+  changed_by uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT subscription_status_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT subscription_status_logs_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id),
+  CONSTRAINT subscription_status_logs_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.admin_users(user_id)
 );
-
-CREATE TYPE subscription_file_label AS ENUM (
-  'Signatory Aadhaar',
-  'Certificate of Incorporation',
-  'Others'
+CREATE TABLE public.subscriptions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  plan_id uuid,
+  purchased_date date,
+  start_date date,
+  expiry_date date,
+  purchase_amount numeric,
+  received_amount numeric,
+  status USER-DEFINED DEFAULT 'Advance Received'::subscription_status,
+  suite_number text,
+  rubber_stamp USER-DEFINED DEFAULT 'Not Available'::rubber_stamp_status,
+  signatory_type USER-DEFINED,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.plans(id)
 );
-
--- 2) Subscription files table
-CREATE TABLE subscription_files (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
-  label subscription_file_label NOT NULL,
-  file_name TEXT NOT NULL,          -- original filename (e.g. aadhaar.pdf)
-  file_path TEXT NOT NULL,          -- storage path or object key (e.g. subscriptions/{subscription_id}/aadhaar.pdf)
-  mime_type TEXT,                   -- e.g. application/pdf, image/png
-  file_size_bytes BIGINT,           -- file size in bytes
-  uploaded_by UUID,                 -- references admin_users(id) who uploaded (optional NULL if uploaded by system)
-  created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.suite_numbers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  suite_number text NOT NULL UNIQUE,
+  status text DEFAULT 'available'::text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT suite_numbers_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  phone text,
+  email text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id)
 );
