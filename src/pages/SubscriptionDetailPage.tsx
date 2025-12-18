@@ -782,24 +782,6 @@ export default function SubscriptionDetailPage() {
                                                     <span className="truncate font-medium">{file.file_name}</span>
                                                     <span className="flex-shrink-0 text-gray-400">({file.label})</span>
                                                 </div>
-                                                {(file.label === 'Signatory Aadhaar' || file.label === 'Certificate of Incorporation') && (
-                                                    file.extracted_data ? (
-                                                        <button
-                                                            onClick={() => setViewingData(file)}
-                                                            className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded hover:bg-green-100"
-                                                        >
-                                                            View Data
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleExtractData(file)}
-                                                            disabled={extracting === file.id}
-                                                            className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-100 disabled:opacity-50"
-                                                        >
-                                                            {extracting === file.id ? 'Extracting...' : 'Extract Data'}
-                                                        </button>
-                                                    )
-                                                )}
                                             </div>
                                         </div>
                                         <div className="ml-4 flex-shrink-0">
