@@ -4,6 +4,7 @@ import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscri
 import type { SubscriptionStatus, RubberStampStatus, NameBoardStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
+import SuffixSelectionModal from '../components/SuffixSelectionModal';
 
 interface Log {
     id: string;
@@ -48,6 +49,7 @@ export default function SubscriptionDetailPage() {
     // Documents Edit State
     const [isEditingDocuments, setIsEditingDocuments] = useState(false);
     const [documentsEditData, setDocumentsEditData] = useState<any>({});
+    const [showSuffixModal, setShowSuffixModal] = useState(false);
 
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -271,6 +273,89 @@ export default function SubscriptionDetailPage() {
         } catch (err: any) {
             console.error(err);
             addToast(err.message || 'Failed to update signatory details', 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleGenerateDocuments = async (suffix: string) => {
+        setUpdating(true);
+        try {
+            const plan = plans.find(p => p.id === subscription.plan_id);
+            const user = users.find(u => u.id === subscription.user_id);
+
+            if (!plan || !plan.tag) {
+                throw new Error('Plan tag is required for document generation');
+            }
+
+            if (!subscription.subscription_signatories) {
+                throw new Error('Signatory details are required');
+            }
+
+            if (!subscription.subscription_companies && subscription.signatory_type === 'company') {
+                throw new Error('Company details are required for company signatory type');
+            }
+
+            const startDate = subscription.start_date ? new Date(subscription.start_date) : new Date();
+            const dateString = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            const dateFormatted = startDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            let activitiesJoined = 'General business activities';
+            if (subscription.activities && subscription.activities.length > 0) {
+                if (subscription.activities.length === 1) {
+                    activitiesJoined = subscription.activities[0];
+                } else if (subscription.activities.length === 2) {
+                    activitiesJoined = subscription.activities.join(' and ');
+                } else {
+                    const lastActivity = subscription.activities[subscription.activities.length - 1];
+                    const otherActivities = subscription.activities.slice(0, -1);
+                    activitiesJoined = otherActivities.join(', ') + ', and ' + lastActivity;
+                }
+            }
+
+            const activityText = `The client is permitted to use the office address solely for administrative purposes related to ${activitiesJoined}. Any additional business activities require prior written approval from Loomian.`;
+
+            const payload = {
+                plan: plan.tag,
+                date_string: dateString,
+                date: dateFormatted,
+                suite_number: subscription.suite_number || '',
+                company_name: subscription.subscription_companies?.name || user?.name || '',
+                company_address: subscription.subscription_companies?.address || '',
+                suffix: suffix,
+                client_name: subscription.subscription_signatories.name || '',
+                client_name_with_suffix: subscription.subscription_signatories.name || '',
+                activity: activityText,
+                client_address: subscription.subscription_signatories.address || '',
+                client_aadhaar_number: subscription.subscription_signatories.aadhaar_number || '',
+                license_fee: subscription.purchase_amount?.toString() || '0',
+                signatory_designation: subscription.subscription_signatories.designation || '',
+                signatory_type: subscription.signatory_type || 'individual'
+            };
+
+            console.log('Generating documents with payload:', payload);
+
+            const { data, error } = await supabase.functions.invoke('generate-documents', {
+                body: payload
+            });
+
+            if (error) throw error;
+
+            console.log('Documents generated:', data);
+
+            await updateSubscription(id!, {
+                br_pdf_url: data.br_pdf_url,
+                br_doc_url: data.br_doc_url,
+                ll_pdf_url: data.ll_pdf_url,
+                ll_doc_url: data.ll_doc_url,
+                drive_folder_url: data.folder_url
+            });
+
+            addToast('Documents generated successfully', 'success');
+            fetchData();
+        } catch (error: any) {
+            console.error('Document generation error:', error);
+            addToast(error.message || 'Failed to generate documents', 'error');
         } finally {
             setUpdating(false);
         }
@@ -1121,103 +1206,7 @@ export default function SubscriptionDetailPage() {
                                 {!isEditingDocuments && (
                                     <>
                                         <button
-                                            onClick={async () => {
-                                                // Prompt for suffix selection
-                                                const suffixChoice = window.prompt(
-                                                    'Select company suffix:\n1 - (LLP under Incorporation)\n2 - (Company under Incorporation)\n3 - No suffix\n\nEnter 1, 2, or 3:'
-                                                );
-
-                                                let suffix = '';
-                                                if (suffixChoice === '1') suffix = '(LLP under Incorporation)';
-                                                else if (suffixChoice === '2') suffix = '(Company under Incorporation)';
-                                                else if (suffixChoice !== '3' && suffixChoice !== null) {
-                                                    addToast('Invalid selection', 'error');
-                                                    return;
-                                                }
-
-                                                if (suffixChoice === null) return; // User cancelled
-
-                                                setUpdating(true);
-                                                try {
-                                                    const plan = plans.find(p => p.id === subscription.plan_id);
-                                                    const user = users.find(u => u.id === subscription.user_id);
-
-                                                    if (!plan || !plan.tag) {
-                                                        throw new Error('Plan tag is required for document generation');
-                                                    }
-
-                                                    if (!subscription.subscription_signatories) {
-                                                        throw new Error('Signatory details are required');
-                                                    }
-
-                                                    if (!subscription.subscription_companies && subscription.signatory_type === 'company') {
-                                                        throw new Error('Company details are required for company signatory type');
-                                                    }
-
-                                                    const startDate = subscription.start_date ? new Date(subscription.start_date) : new Date();
-                                                    const dateString = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                                                    const dateFormatted = startDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-                                                    let activitiesJoined = 'General business activities';
-                                                    if (subscription.activities && subscription.activities.length > 0) {
-                                                        if (subscription.activities.length === 1) {
-                                                            activitiesJoined = subscription.activities[0];
-                                                        } else if (subscription.activities.length === 2) {
-                                                            activitiesJoined = subscription.activities.join(' and ');
-                                                        } else {
-                                                            const lastActivity = subscription.activities[subscription.activities.length - 1];
-                                                            const otherActivities = subscription.activities.slice(0, -1);
-                                                            activitiesJoined = otherActivities.join(', ') + ', and ' + lastActivity;
-                                                        }
-                                                    }
-
-                                                    const activityText = `The client is permitted to use the office address solely for administrative purposes related to ${activitiesJoined}. Any additional business activities require prior written approval from Loomian.`;
-
-                                                    const payload = {
-                                                        plan: plan.tag,
-                                                        date_string: dateString,
-                                                        date: dateFormatted,
-                                                        suite_number: subscription.suite_number || '',
-                                                        company_name: subscription.subscription_companies?.name || user?.name || '',
-                                                        company_address: subscription.subscription_companies?.address || '',
-                                                        suffix: suffix,
-                                                        client_name: subscription.subscription_signatories.name || '',
-                                                        client_name_with_suffix: subscription.subscription_signatories.name || '',
-                                                        activity: activityText,
-                                                        client_address: subscription.subscription_signatories.address || '',
-                                                        client_aadhaar_number: subscription.subscription_signatories.aadhaar_number || '',
-                                                        license_fee: subscription.purchase_amount?.toString() || '0',
-                                                        signatory_designation: subscription.subscription_signatories.designation || '',
-                                                        signatory_type: subscription.signatory_type || 'individual'
-                                                    };
-
-                                                    console.log('Generating documents with payload:', payload);
-
-                                                    const { data, error } = await supabase.functions.invoke('generate-documents', {
-                                                        body: payload
-                                                    });
-
-                                                    if (error) throw error;
-
-                                                    console.log('Documents generated:', data);
-
-                                                    await updateSubscription(id!, {
-                                                        br_pdf_url: data.br_pdf_url,
-                                                        br_doc_url: data.br_doc_url,
-                                                        ll_pdf_url: data.ll_pdf_url,
-                                                        ll_doc_url: data.ll_doc_url,
-                                                        drive_folder_url: data.folder_url
-                                                    });
-
-                                                    addToast('Documents generated successfully', 'success');
-                                                    fetchData();
-                                                } catch (error: any) {
-                                                    console.error('Document generation error:', error);
-                                                    addToast(error.message || 'Failed to generate documents', 'error');
-                                                } finally {
-                                                    setUpdating(false);
-                                                }
-                                            }}
+                                            onClick={() => setShowSuffixModal(true)}
                                             disabled={updating}
                                             className="rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
                                         >
@@ -1730,6 +1719,15 @@ ${address}`;
                     </div>
                 )
             }
+
+            <SuffixSelectionModal
+                isOpen={showSuffixModal}
+                onClose={() => setShowSuffixModal(false)}
+                onSelect={(suffix: string) => {
+                    handleGenerateDocuments(suffix);
+                    setShowSuffixModal(false);
+                }}
+            />
         </div >
     );
 }
