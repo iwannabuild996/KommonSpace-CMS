@@ -9,7 +9,7 @@ export default function SubscriptionsPage() {
     const [subscriptions, setSubscriptions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const fetchSubscriptions = async () => {
         setLoading(true);
@@ -45,6 +45,10 @@ export default function SubscriptionsPage() {
         if (rubberStampParam === 'Not Available') {
             // Match logic from Dashboard: Completed AND (Not Available or Missing)
             matchesRubberStamp = sub.status === 'Completed' && (sub.rubber_stamp === 'Not Available' || !sub.rubber_stamp);
+        } else if (rubberStampParam === 'Available') {
+            matchesRubberStamp = sub.rubber_stamp === 'Available';
+        } else if (rubberStampParam === 'With Client') {
+            matchesRubberStamp = sub.rubber_stamp === 'With Client';
         }
 
         return matchesSearch && matchesStatus && matchesRubberStamp;
@@ -53,6 +57,16 @@ export default function SubscriptionsPage() {
     useEffect(() => {
         fetchSubscriptions();
     }, []);
+
+    const handleFilterChange = (key: string, value: string) => {
+        const newParams = new URLSearchParams(searchParams);
+        if (value) {
+            newParams.set(key, value);
+        } else {
+            newParams.delete(key);
+        }
+        setSearchParams(newParams);
+    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
@@ -74,7 +88,7 @@ export default function SubscriptionsPage() {
                 </div>
             </div>
 
-            <div className="mt-6 flex gap-4">
+            <div className="mt-6 flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1 max-w-md">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -88,6 +102,30 @@ export default function SubscriptionsPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
+                </div>
+                <div className="flex gap-2">
+                    <select
+                        className="block rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        value={searchParams.get('status') || ''}
+                        onChange={(e) => handleFilterChange('status', e.target.value)}
+                    >
+                        <option value="">All Statuses</option>
+                        <option value="Advance Received">Advance Received</option>
+                        <option value="Paper Collected">Paper Collected</option>
+                        <option value="Documents Ready">Documents Ready</option>
+                        <option value="Signed and Uploaded">Signed and Uploaded</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                    <select
+                        className="block rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        value={searchParams.get('rubberStamp') || ''}
+                        onChange={(e) => handleFilterChange('rubberStamp', e.target.value)}
+                    >
+                        <option value="">All Rubber Stamps</option>
+                        <option value="Available">Available</option>
+                        <option value="Not Available">Not Available</option>
+                        <option value="With Client">With Client</option>
+                    </select>
                 </div>
             </div>
 
