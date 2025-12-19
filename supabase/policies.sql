@@ -89,3 +89,57 @@ CREATE POLICY "Allow admin access" ON subscription_signatories
 FOR ALL TO authenticated
 USING (is_admin());
 
+
+
+CREATE OR REPLACE FUNCTION is_staff() 
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM admin_users 
+    WHERE user_id = auth.uid() 
+    AND role = 'staff'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE POLICY "Allow staff access" ON users
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Plans Table
+CREATE POLICY "Allow staff access" ON plans
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Subscriptions Table
+CREATE POLICY "Allow staff access" ON subscriptions
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Logs
+CREATE POLICY "Allow staff access" ON subscription_status_logs
+FOR ALL TO authenticated
+USING (is_staff());
+
+CREATE POLICY "Allow staff access" ON suite_numbers
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Subscription Files
+
+CREATE POLICY "Allow staff access" ON subscription_files
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Subscription Companies
+CREATE POLICY "Allow staff access" ON subscription_companies
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Subscription Signatories
+CREATE POLICY "Allow staff access" ON subscription_signatories
+FOR ALL TO authenticated
+USING (is_staff());
+
+
