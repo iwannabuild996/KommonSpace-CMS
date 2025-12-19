@@ -118,7 +118,8 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
 
     const filteredUsers = users.filter(user =>
         user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-        (user.email || '').toLowerCase().includes(userSearch.toLowerCase())
+        (user.email || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+        (user.phone || '').toLowerCase().includes(userSearch.toLowerCase())
     );
 
     return (
@@ -181,7 +182,9 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                                                     {user.name}
                                                                 </span>
                                                                 <span className="block truncate text-xs text-gray-500 group-hover:text-indigo-200">
-                                                                    {user.email}
+                                                                    {user.email && user.phone
+                                                                        ? `${user.email} • ${user.phone}`
+                                                                        : (user.email || user.phone || 'No contact info')}
                                                                 </span>
                                                             </div>
                                                         ))
