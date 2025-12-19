@@ -68,6 +68,16 @@ export default function SubscriptionsPage() {
         setSearchParams(newParams);
     };
 
+    const formatDate = (dateString: string | undefined) => {
+        if (!dateString) return '-';
+        // Handle YYYY-MM-DD
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return dateString;
+    };
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="sm:flex sm:items-center">
@@ -136,10 +146,11 @@ export default function SubscriptionsPage() {
                             <table className="min-w-full divide-y divide-gray-300">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">User</th>
+                                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Suite</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">User</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Plan</th>
-                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Suite</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Start</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Expiry</th>
                                         <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                                             <span className="sr-only">Details</span>
@@ -149,11 +160,11 @@ export default function SubscriptionsPage() {
                                 <tbody className="divide-y divide-gray-200 bg-white">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={6} className="py-4 text-center text-sm text-gray-500">Loading...</td>
+                                            <td colSpan={7} className="py-4 text-center text-sm text-gray-500">Loading...</td>
                                         </tr>
                                     ) : filteredSubscriptions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="py-4 text-center text-sm text-gray-500">
+                                            <td colSpan={7} className="py-4 text-center text-sm text-gray-500">
                                                 {searchQuery ? 'No matching subscriptions found.' : 'No subscriptions found.'}
                                             </td>
                                         </tr>
@@ -161,13 +172,13 @@ export default function SubscriptionsPage() {
                                         filteredSubscriptions.map((sub) => (
                                             <tr key={sub.id}>
                                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                                                    {sub.suite_number || '-'}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     {sub.users?.name || 'Unknown User'}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     {sub.plans?.name || 'Unknown Plan'}
-                                                </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    {sub.suite_number || '-'}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${sub.status === 'Completed' ? 'bg-green-50 text-green-700 ring-green-600/20' :
@@ -177,7 +188,8 @@ export default function SubscriptionsPage() {
                                                         {sub.status}
                                                     </span>
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{sub.expiry_date || '-'}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatDate(sub.start_date)}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{formatDate(sub.expiry_date)}</td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                                     <a href={`/subscriptions/${sub.id}`} className="text-indigo-600 hover:text-indigo-900">
                                                         View<span className="sr-only">, {sub.id}</span>

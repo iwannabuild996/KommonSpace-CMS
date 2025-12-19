@@ -176,7 +176,7 @@ export const getSubscriptions = async () => {
             subscription_signatories(*),
             subscription_companies(*)
         `)
-        .order('created_at', { ascending: false });
+        .order('suite_number', { ascending: false });
 
     if (error) throw error;
     return data as any[];
