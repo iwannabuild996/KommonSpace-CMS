@@ -50,6 +50,33 @@ export default function UsersPage() {
         setCurrentPage(page);
     };
 
+    const COUNTRY_CODES = [
+        { code: '+91', country: 'India' },
+        { code: '+971', country: 'UAE' },
+        { code: '+966', country: 'Saudi Arabia' },
+        { code: '+1', country: 'USA' },
+        { code: '+44', country: 'UK' },
+        { code: '+974', country: 'Qatar' },
+        { code: '+968', country: 'Oman' },
+        { code: '+965', country: 'Kuwait' },
+        { code: '+973', country: 'Bahrain' },
+    ];
+
+    // Helper to split phone
+    const splitPhone = (fullPhone: string) => {
+        if (!fullPhone) return { code: '+91', number: '' };
+        // Try to match specific codes first (longest update)
+        // Simple logic: check if starts with any known code
+        const matched = COUNTRY_CODES.find(c => fullPhone.startsWith(c.code));
+        if (matched) {
+            return { code: matched.code, number: fullPhone.slice(matched.code.length) };
+        }
+        return { code: '+91', number: fullPhone }; // Fallback
+    };
+
+    // Edit State with split phone
+    const [editPhoneData, setEditPhoneData] = useState({ code: '+91', number: '' });
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="sm:flex sm:items-center">
@@ -118,9 +145,11 @@ export default function UsersPage() {
                                                     <button
                                                         onClick={() => {
                                                             setEditingUser(user);
+                                                            const { code, number } = splitPhone(user.phone || '');
+                                                            setEditPhoneData({ code, number });
                                                             setEditFormData({
                                                                 name: user.name,
-                                                                phone: user.phone || '',
+                                                                phone: '', // Unused in form now, using editPhoneData
                                                                 email: user.email || ''
                                                             });
                                                             setIsEditOpen(true);
@@ -205,7 +234,11 @@ export default function UsersPage() {
                             <form onSubmit={async (e) => {
                                 e.preventDefault();
                                 try {
-                                    await updateUser(editingUser.id, editFormData);
+                                    const fullPhone = editPhoneData.number ? `${editPhoneData.code}${editPhoneData.number}` : '';
+                                    await updateUser(editingUser.id, {
+                                        ...editFormData,
+                                        phone: fullPhone
+                                    });
                                     addToast('User updated successfully', 'success');
                                     setIsEditOpen(false);
                                     fetchUsers();
@@ -229,12 +262,29 @@ export default function UsersPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Phone</label>
-                                            <input
-                                                type="text"
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                                value={editFormData.phone}
-                                                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                                            />
+                                            <div className="relative mt-1 rounded-md shadow-sm">
+                                                <div className="absolute inset-y-0 left-0 flex items-center">
+                                                    <label htmlFor="edit-country" className="sr-only">Country</label>
+                                                    <select
+                                                        id="edit-country"
+                                                        value={editPhoneData.code}
+                                                        onChange={(e) => setEditPhoneData({ ...editPhoneData, code: e.target.value })}
+                                                        className="h-full rounded-md border-0 bg-transparent py-0 pl-3 pr-7 text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                                                    >
+                                                        {COUNTRY_CODES.map((c) => (
+                                                            <option key={c.code} value={c.code}>
+                                                                {c.code}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    className="block w-full rounded-md border-0 py-1.5 pl-24 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                                    value={editPhoneData.number}
+                                                    onChange={(e) => setEditPhoneData({ ...editPhoneData, number: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Email</label>

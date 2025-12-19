@@ -11,11 +11,22 @@ interface CreateUserModalProps {
 const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        phone: '',
-        email: '',
-    });
+    const [name, setName] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+
+    const COUNTRY_CODES = [
+        { code: '+91', country: 'India' },
+        { code: '+971', country: 'UAE' },
+        { code: '+966', country: 'Saudi Arabia' },
+        { code: '+1', country: 'USA' },
+        { code: '+44', country: 'UK' },
+        { code: '+974', country: 'Qatar' },
+        { code: '+968', country: 'Oman' },
+        { code: '+965', country: 'Kuwait' },
+        { code: '+973', country: 'Bahrain' },
+    ];
 
     if (!isOpen) return null;
 
@@ -24,11 +35,15 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
         setLoading(true);
 
         try {
-            await createUser(formData);
+            const formattedPhone = phone ? `${countryCode}${phone}` : '';
+            await createUser({ name, phone: formattedPhone, email });
             addToast('User created successfully', 'success');
             onSuccess();
             onClose();
-            setFormData({ name: '', phone: '', email: '' });
+            setName('');
+            setPhone('');
+            setEmail('');
+            setCountryCode('+91');
         } catch (err: any) {
             console.error(err);
             addToast(err.message || 'Failed to create user', 'error');
@@ -55,20 +70,39 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                                         id="name"
                                         required
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
                                     />
                                 </div>
 
                                 <div>
                                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone</label>
-                                    <input
-                                        type="tel"
-                                        id="phone"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    />
+                                    <div className="relative mt-1 rounded-md shadow-sm">
+                                        <div className="absolute inset-y-0 left-0 flex items-center">
+                                            <label htmlFor="country" className="sr-only">Country</label>
+                                            <select
+                                                id="country"
+                                                name="country"
+                                                value={countryCode}
+                                                onChange={(e) => setCountryCode(e.target.value)}
+                                                className="h-full rounded-md border-0 bg-transparent py-0 pl-3 pr-7 text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                                            >
+                                                {COUNTRY_CODES.map((c) => (
+                                                    <option key={c.code} value={c.code}>
+                                                        {c.code}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            id="phone"
+                                            className="block w-full rounded-md border-0 py-1.5 pl-24 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+                                            placeholder="9876543210"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div>
@@ -77,8 +111,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                                         type="email"
                                         id="email"
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
                                     />
                                 </div>
                             </div>
