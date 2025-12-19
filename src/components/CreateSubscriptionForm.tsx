@@ -4,12 +4,14 @@ import type { User, Plan } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import CreateUserModal from './CreateUserModal'; // Reusing this
 
+const steps = ['Plan & User', 'Dates & Amounts', 'Signatory & Company', 'Review'];
+
 interface CreateSubscriptionFormProps {
     onSuccess: () => void;
     onCancel: () => void;
 }
 
-const steps = ['Plan & User', 'Dates & Amounts', 'Review'];
+
 
 export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSubscriptionFormProps) {
     const { addToast } = useToast();
@@ -73,6 +75,9 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
             case 1:
                 if (!formData.purchased_date) return 'Purchase date is required';
                 if (!formData.purchase_amount || isNaN(Number(formData.purchase_amount))) return 'Valid purchase amount is required';
+                return null;
+            case 2:
+                // All fields in Signatory & Company are optional
                 return null;
             default:
                 return null;
@@ -271,6 +276,98 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
 
 
                     {activeStep === 2 && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Signatory Type</label>
+                                <div className="mt-2 flex gap-4">
+                                    <label className="inline-flex items-center">
+                                        <input
+                                            type="radio"
+                                            className="form-radio text-indigo-600"
+                                            name="signatoryType"
+                                            value="individual"
+                                            checked={formData.signatory_type === 'individual'}
+                                            onChange={() => setFormData({ ...formData, signatory_type: 'individual' })}
+                                        />
+                                        <span className="ml-2">Individual</span>
+                                    </label>
+                                    <label className="inline-flex items-center">
+                                        <input
+                                            type="radio"
+                                            className="form-radio text-indigo-600"
+                                            name="signatoryType"
+                                            value="company"
+                                            checked={formData.signatory_type === 'company'}
+                                            onChange={() => setFormData({ ...formData, signatory_type: 'company' })}
+                                        />
+                                        <span className="ml-2">Company</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.company_name}
+                                        onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Company Address</label>
+                                    <textarea
+                                        rows={2}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.company_address}
+                                        onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Signatory Name</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.signatory_name}
+                                        onChange={(e) => setFormData({ ...formData, signatory_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Designation</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.signatory_designation}
+                                        onChange={(e) => setFormData({ ...formData, signatory_designation: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Signatory Aadhaar (Optional)</label>
+                                    <input
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.signatory_aadhaar}
+                                        onChange={(e) => setFormData({ ...formData, signatory_aadhaar: e.target.value })}
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Signatory Address</label>
+                                    <textarea
+                                        rows={2}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.signatory_address}
+                                        onChange={(e) => setFormData({ ...formData, signatory_address: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeStep === 3 && (
                         <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
                             <h3 className="text-sm font-medium text-gray-900 mb-4">Review Subscription Details</h3>
                             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
@@ -290,7 +387,18 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                     <dt className="text-sm font-medium text-gray-500">Amount</dt>
                                     <dd className="mt-1 text-sm text-gray-900">₹{formData.purchase_amount}</dd>
                                 </div>
-
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Signatory Type</dt>
+                                    <dd className="mt-1 text-sm text-gray-900 capitalize">{formData.signatory_type}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Company</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">{formData.company_name || '-'}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Signatory Name</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">{formData.signatory_name || '-'}</dd>
+                                </div>
                             </dl>
                         </div>
                     )}

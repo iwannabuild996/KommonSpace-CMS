@@ -266,7 +266,7 @@ export const createSubscription = async (
     }
 
     // Step C: Insert Company Data (if company signatory)
-    if (payload.signatory_type === 'company' && payload.company_name) {
+    if (payload.company_name) {
         const companyData = {
             subscription_id: sub.id,
             name: payload.company_name,
