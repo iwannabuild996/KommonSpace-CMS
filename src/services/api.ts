@@ -115,6 +115,19 @@ export const createUser = async (payload: { name: string; phone?: string; email?
     return data as User;
 };
 
+// 1.5 Update User
+export const updateUser = async (id: string, payload: Partial<User>) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as User;
+};
+
 // 2. Get Users (optional search query)
 export const getUsers = async (q?: string) => {
     let query = supabase.from('users').select('*').order('created_at', { ascending: false });

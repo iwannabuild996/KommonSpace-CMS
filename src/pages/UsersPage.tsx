@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getUsers } from '../services/api';
+import { getUsers, updateUser } from '../services/api';
 import type { User } from '../services/api';
 import CreateUserModal from '../components/CreateUserModal';
 import { useToast } from '../hooks/useToast';
@@ -10,6 +10,11 @@ export default function UsersPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Edit State
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [editFormData, setEditFormData] = useState({ name: '', phone: '', email: '' });
 
     // Client-side pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -110,7 +115,20 @@ export default function UsersPage() {
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.phone || '-'}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.email || '-'}</td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                                    <a href={`/users/${user.id}`} className="text-indigo-600 hover:text-indigo-900">View<span className="sr-only">, {user.name}</span></a>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingUser(user);
+                                                            setEditFormData({
+                                                                name: user.name,
+                                                                phone: user.phone || '',
+                                                                email: user.email || ''
+                                                            });
+                                                            setIsEditOpen(true);
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-900"
+                                                    >
+                                                        Edit<span className="sr-only">, {user.name}</span>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -174,6 +192,77 @@ export default function UsersPage() {
                                     </svg>
                                 </button>
                             </nav>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isEditOpen && editingUser && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setIsEditOpen(false)} />
+                        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                try {
+                                    await updateUser(editingUser.id, editFormData);
+                                    addToast('User updated successfully', 'success');
+                                    setIsEditOpen(false);
+                                    fetchUsers();
+                                } catch (err) {
+                                    console.error(err);
+                                    addToast('Failed to update user', 'error');
+                                }
+                            }}>
+                                <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                                    <h3 className="text-lg font-semibold leading-6 text-gray-900 mb-4">Edit User</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={editFormData.name}
+                                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Phone</label>
+                                            <input
+                                                type="text"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={editFormData.phone}
+                                                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Email</label>
+                                            <input
+                                                type="email"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={editFormData.email}
+                                                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                                    <button
+                                        type="submit"
+                                        className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:ml-3 sm:w-auto"
+                                    >
+                                        Save Changes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                        onClick={() => setIsEditOpen(false)}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
