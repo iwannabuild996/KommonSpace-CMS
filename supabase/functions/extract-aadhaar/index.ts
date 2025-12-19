@@ -65,8 +65,8 @@ serve(async (req) => {
             .eq('user_id', user.id)
             .single()
 
-        if (adminError || !adminUser) {
-            console.error('Admin check failed:', adminError);
+        if (adminError || !adminUser || adminUser.role !== 'admin') {
+            console.error('Admin check failed:', adminError || 'User is not admin');
             return new Response(
                 JSON.stringify({ error: 'Forbidden - Admin access required' }),
                 { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
