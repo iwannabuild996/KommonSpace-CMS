@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getSubscriptions } from '../services/api';
 import CreateSubscriptionForm from '../components/CreateSubscriptionForm';
 import { useToast } from '../hooks/useToast';
@@ -8,6 +9,7 @@ export default function SubscriptionsPage() {
     const [subscriptions, setSubscriptions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [searchParams] = useSearchParams();
 
     const fetchSubscriptions = async () => {
         setLoading(true);
@@ -28,7 +30,24 @@ export default function SubscriptionsPage() {
         const query = searchQuery.toLowerCase();
         const userName = sub.users?.name?.toLowerCase() || '';
         const suiteNumber = sub.suite_number?.toLowerCase() || '';
-        return userName.includes(query) || suiteNumber.includes(query);
+        const matchesSearch = userName.includes(query) || suiteNumber.includes(query);
+
+        // Filter by Status query param
+        const statusParam = searchParams.get('status');
+        let matchesStatus = true;
+        if (statusParam) {
+            matchesStatus = sub.status === statusParam;
+        }
+
+        // Filter by Rubber Stamp query param
+        const rubberStampParam = searchParams.get('rubberStamp');
+        let matchesRubberStamp = true;
+        if (rubberStampParam === 'Not Available') {
+            // Match logic from Dashboard: Completed AND (Not Available or Missing)
+            matchesRubberStamp = sub.status === 'Completed' && (sub.rubber_stamp === 'Not Available' || !sub.rubber_stamp);
+        }
+
+        return matchesSearch && matchesStatus && matchesRubberStamp;
     });
 
     useEffect(() => {

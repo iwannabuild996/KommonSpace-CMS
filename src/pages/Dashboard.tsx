@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getUsers, getSubscriptions } from '../services/api'; // Types will be fixed
 import { useToast } from '../hooks/useToast';
 import CreateUserModal from '../components/CreateUserModal';
@@ -6,6 +7,7 @@ import CreateSubscriptionForm from '../components/CreateSubscriptionForm';
 
 export default function Dashboard() {
     const { addToast } = useToast();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
 
     // Stats State
@@ -14,7 +16,8 @@ export default function Dashboard() {
         totalSubscriptions: 0,
         activeSubscriptions: 0,
         expiredSubscriptions: 0,
-        totalRevenue: 0,
+        paperNeeded: 0,
+        rubberStampNeeded: 0,
         statusCounts: {} as Record<string, number>,
     });
 
@@ -47,7 +50,8 @@ export default function Dashboard() {
         const today = new Date().toISOString().split('T')[0];
         let active = 0;
         let expired = 0;
-        let revenue = 0;
+        let paperNeeded = 0;
+        let rubberStampNeeded = 0;
         const statusCounts: Record<string, number> = {};
 
         subscriptions.forEach((sub) => {
@@ -58,9 +62,14 @@ export default function Dashboard() {
                 expired++;
             }
 
-            // Revenue
-            if (sub.purchase_amount) {
-                revenue += Number(sub.purchase_amount);
+            // Paper Needed (Advance Received)
+            if (sub.status === 'Advance Received') {
+                paperNeeded++;
+            }
+
+            // Rubber Stamp Needed (Completed & Not Available)
+            if (sub.status === 'Completed' && (sub.rubber_stamp === 'Not Available' || !sub.rubber_stamp)) {
+                rubberStampNeeded++;
             }
 
             // Status Counts
@@ -73,13 +82,17 @@ export default function Dashboard() {
             totalSubscriptions: subscriptions.length,
             activeSubscriptions: active,
             expiredSubscriptions: expired,
-            totalRevenue: revenue,
+            paperNeeded,
+            rubberStampNeeded,
             statusCounts,
         });
     };
 
-    const StatCard = ({ title, value, subtext }: { title: string; value: string | number; subtext?: string }) => (
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+    const StatCard = ({ title, value, subtext, onClick }: { title: string; value: string | number; subtext?: string; onClick?: () => void }) => (
+        <div
+            className={`overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6 ${onClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+            onClick={onClick}
+        >
             <dt className="truncate text-sm font-medium text-gray-500">{title}</dt>
             <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{value}</dd>
             {subtext && <dd className="mt-1 text-sm text-gray-500">{subtext}</dd>}
@@ -119,9 +132,17 @@ export default function Dashboard() {
                     {/* Main Stats Grid */}
                     <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                         <StatCard title="Total Users" value={stats.totalUsers} />
-                        <StatCard title="Total Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} />
+                        <StatCard
+                            title="Paper Needed"
+                            value={stats.paperNeeded}
+                            onClick={() => navigate('/subscriptions?status=Advance Received')}
+                        />
+                        <StatCard
+                            title="Rubber Stamp Needed"
+                            value={stats.rubberStampNeeded}
+                            onClick={() => navigate('/subscriptions?rubberStamp=Not Available')}
+                        />
                         <StatCard title="Active Subscriptions" value={stats.activeSubscriptions} />
-                        <StatCard title="Expired" value={stats.expiredSubscriptions} />
                     </dl>
 
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
