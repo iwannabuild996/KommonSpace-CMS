@@ -188,7 +188,7 @@ export const getSubscription = async (id: string) => {
         .from('subscriptions')
         .select(`
             *,
-            users(name),
+            users(name, phone),
             plans(name),
             subscription_signatories(*),
             subscription_companies(*)

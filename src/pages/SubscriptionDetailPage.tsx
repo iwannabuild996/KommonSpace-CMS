@@ -361,6 +361,50 @@ export default function SubscriptionDetailPage() {
         }
     };
 
+    const handleCopyPaperContent = async () => {
+        if (!subscription) return;
+
+        const signatoryName = subscription.subscription_signatories?.name || '________________';
+        const userPhone = subscription.users?.phone || '________________';
+
+        let secondPartyDetails = '';
+
+        if (subscription.signatory_type === 'company') {
+            const signatoryDesignation = subscription.subscription_signatories?.designation || '';
+            const companyName = subscription.subscription_companies?.name || '________________';
+            const companyAddress = subscription.subscription_companies?.address || '________________';
+
+            secondPartyDetails = `${signatoryDesignation} ${signatoryName}
+${companyName}
+${companyAddress}
+${userPhone}`;
+        } else {
+            // Individual
+            const signatoryAddress = subscription.subscription_signatories?.address || '________________';
+            secondPartyDetails = `${signatoryName}
+${signatoryAddress}
+${userPhone}`;
+        }
+
+        const textToCopy = `500 Rupees Stamp Paper
+
+First Party
+Director - Muhammed Shajar C
+Loomian Developers Private Limited
+10/1744, 1st Floor, Sowbhagya building, Athani, Kakkanad, Kusumagiri P.O, Kochi, 682030
+
+Second Party
+${secondPartyDetails}`;
+
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            addToast('Paper content copied to clipboard', 'success');
+        } catch (err) {
+            console.error('Failed to copy: ', err);
+            addToast('Failed to copy content', 'error');
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-gray-500">Loading subscription details...</div>;
 
     if (!subscription) return <div className="p-8 text-center text-gray-500">Subscription not found</div>;
@@ -424,61 +468,72 @@ export default function SubscriptionDetailPage() {
                         </div>
                         <div className="border-t border-gray-100">
                             {!isEditingInfo ? (
-                                <dl className="divide-y divide-gray-100">
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">User</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.users?.name}</dd>
+                                <>
+                                    <dl className="divide-y divide-gray-100">
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">User</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.users?.name}</dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Plan</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.plans?.name}</dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Suite Number</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.suite_number || '-'}</dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Dates</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                <p>Purchased: {subscription.purchased_date}</p>
+                                                <p>Start: {subscription.start_date}</p>
+                                                <p>Expiry: {subscription.expiry_date}</p>
+                                            </dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Financials</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                <p>Amount: ₹{subscription.purchase_amount}</p>
+                                                <p>Received: ₹{subscription.received_amount}</p>
+                                            </dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Signatory Type</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
+                                                    {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
+                                                </span>
+                                            </dd>
+                                        </div>
+                                        <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                            <dt className="text-sm font-medium text-gray-900">Activities</dt>
+                                            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                                                {subscription.activities && subscription.activities.length > 0 ? (
+                                                    <ul className="space-y-1">
+                                                        {subscription.activities.map((activity: string, index: number) => (
+                                                            <li key={index} className="flex items-start">
+                                                                <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                                                    {activity}
+                                                                </span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <span className="text-gray-500">No activities</span>
+                                                )}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                    <div className="border-t border-gray-100 px-4 py-4 sm:px-6">
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyPaperContent}
+                                            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                        >
+                                            Paper Content
+                                        </button>
                                     </div>
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Plan</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.plans?.name}</dd>
-                                    </div>
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Suite Number</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{subscription.suite_number || '-'}</dd>
-                                    </div>
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Dates</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                            <p>Purchased: {subscription.purchased_date}</p>
-                                            <p>Start: {subscription.start_date}</p>
-                                            <p>Expiry: {subscription.expiry_date}</p>
-                                        </dd>
-                                    </div>
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Financials</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                            <p>Amount: ₹{subscription.purchase_amount}</p>
-                                            <p>Received: ₹{subscription.received_amount}</p>
-                                        </dd>
-                                    </div>
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Signatory Type</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${subscription.signatory_type === 'company' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' : 'bg-green-50 text-green-700 ring-green-700/10'}`}>
-                                                {subscription.signatory_type === 'company' ? 'Company' : 'Individual'}
-                                            </span>
-                                        </dd>
-                                    </div>
-                                    <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                        <dt className="text-sm font-medium text-gray-900">Activities</dt>
-                                        <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                                            {subscription.activities && subscription.activities.length > 0 ? (
-                                                <ul className="space-y-1">
-                                                    {subscription.activities.map((activity: string, index: number) => (
-                                                        <li key={index} className="flex items-start">
-                                                            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                                                                {activity}
-                                                            </span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <span className="text-gray-500">No activities</span>
-                                            )}
-                                        </dd>
-                                    </div>
-                                </dl>
+                                </>
                             ) : (
                                 <div className="p-6 space-y-6">
                                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
