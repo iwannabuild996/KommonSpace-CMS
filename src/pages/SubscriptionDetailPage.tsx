@@ -509,7 +509,7 @@ ${secondPartyDetails}`;
         doc.setFontSize(9);
         doc.text(`Recorded by: ${recorderName}`, 20, 270);
 
-        doc.save(`receipt_${payment.id}.pdf`);
+        doc.save(`KommonSpace Payment Receipt ${payment.id}.pdf`);
     };
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading subscription details...</div>;
