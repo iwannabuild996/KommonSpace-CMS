@@ -6,6 +6,8 @@ import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
 import SuffixSelectionModal from '../components/SuffixSelectionModal';
 import AddPaymentModal from '../components/AddPaymentModal';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Log {
     id: string;
@@ -413,6 +415,82 @@ ${secondPartyDetails}`;
             console.error('Failed to copy: ', err);
             addToast('Failed to copy content', 'error');
         }
+    };
+
+    const handleDownloadReceipt = (payment: Payment) => {
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFontSize(22);
+        doc.setTextColor(79, 70, 229); // Indigo 600
+        doc.text('PAYMENT RECEIPT', 105, 20, { align: 'center' });
+
+        // Company Info
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('Loomian Developers Private Limited', 105, 30, { align: 'center' });
+        doc.text('Kakkanad, Kochi, Kerala, 682030', 105, 35, { align: 'center' });
+
+        // Divider
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(200);
+        doc.line(20, 45, 190, 45);
+
+        // Receipt Details
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Receipt ID: #${payment.id}`, 20, 60);
+        doc.text(`Date: ${new Date(payment.payment_date).toLocaleDateString()}`, 140, 60);
+
+        // Client Info
+        doc.setFontSize(14);
+        doc.text('Received From:', 20, 80);
+        doc.setFontSize(11);
+        doc.setTextColor(50);
+
+        const clientName = subscription.subscription_companies?.name || subscription.users?.name || 'Valued Client';
+        const clientPhone = subscription.users?.phone || '';
+        const suite = subscription.suite_number ? `Suite #${subscription.suite_number}` : '';
+
+        doc.text(clientName, 20, 90);
+        if (clientPhone) doc.text(clientPhone, 20, 96);
+        if (suite) doc.text(suite, 20, 102);
+
+        // Payment Table
+        autoTable(doc, {
+            startY: 115,
+            head: [['Description', 'Payment Mode', 'Amount']],
+            body: [
+                [
+                    `Subscription Payment - ${subscription.plans?.name || 'Plan'}`,
+                    payment.payment_type || 'Bank Transfer',
+                    `INR ${payment.amount.toLocaleString()}`
+                ]
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [79, 70, 229] },
+        });
+
+        // Total
+        const finalY = (doc as any).lastAutoTable.finalY || 150;
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Total Amount Paid: INR ${payment.amount.toLocaleString()}`, 140, finalY + 15, { align: 'right' });
+
+        // Footer
+        doc.setFontSize(10);
+        doc.setTextColor(150);
+        doc.text('Thank you for your business!', 105, 250, { align: 'center' });
+
+        // Recorded By
+        const recorderName = (() => {
+            const admin = adminUsers.find(u => u.user_id === payment.added_by);
+            return admin?.name || 'System';
+        })();
+        doc.setFontSize(9);
+        doc.text(`Recorded by: ${recorderName}`, 20, 270);
+
+        doc.save(`receipt_${payment.id}.pdf`);
     };
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading subscription details...</div>;
@@ -1497,6 +1575,15 @@ ${secondPartyDetails}`;
                                             <div className="text-right">
                                                 <p className="text-sm text-gray-700">{new Date(payment.payment_date).toLocaleDateString()}</p>
                                                 <p className="text-xs text-gray-400">ID: {payment.id}</p>
+                                                <button
+                                                    onClick={() => handleDownloadReceipt(payment)}
+                                                    className="inline-flex items-center gap-1 mt-1 text-indigo-600 hover:text-indigo-500 text-xs font-medium"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v4.69l-2.22-2.22a.75.75 0 10-1.06 1.06l3.5 3.5a.75.75 0 001.06 0l3.5-3.5a.75.75 0 00-1.06-1.06l-2.22 2.22V6.75z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Receipt
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
