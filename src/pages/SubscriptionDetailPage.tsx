@@ -8,6 +8,7 @@ import SuffixSelectionModal from '../components/SuffixSelectionModal';
 import AddPaymentModal from '../components/AddPaymentModal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import logo from '../assets/logo.png';
 
 interface Log {
     id: string;
@@ -420,31 +421,44 @@ ${secondPartyDetails}`;
     const handleDownloadReceipt = (payment: Payment) => {
         const doc = new jsPDF();
 
+        // Add Logo
+        const imgProps = doc.getImageProperties(logo);
+        const imgWidth = 40;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+        doc.addImage(logo, 'PNG', 20, 15, imgWidth, imgHeight);
+
         // Header
         doc.setFontSize(22);
         doc.setTextColor(79, 70, 229); // Indigo 600
-        doc.text('PAYMENT RECEIPT', 105, 20, { align: 'center' });
+        doc.text('PAYMENT RECEIPT', 190, 25, { align: 'right' });
 
         // Company Info
         doc.setFontSize(10);
         doc.setTextColor(100);
-        doc.text('Loomian Developers Private Limited', 105, 30, { align: 'center' });
-        doc.text('Kakkanad, Kochi, Kerala, 682030', 105, 35, { align: 'center' });
+        doc.text('Loomian Developers Private Limited', 190, 35, { align: 'right' });
+        doc.text('Kakkanad, Kochi, Kerala, 682030', 190, 40, { align: 'right' });
 
         // Divider
         doc.setLineWidth(0.5);
         doc.setDrawColor(200);
-        doc.line(20, 45, 190, 45);
+        doc.line(20, 50, 190, 50);
+
+        // Receipt ID Formatting: DDMMYYYY/id
+        const dateObj = new Date(payment.payment_date);
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        const receiptId = `${day}${month}${year}/${payment.id}`;
 
         // Receipt Details
         doc.setFontSize(12);
         doc.setTextColor(0);
-        doc.text(`Receipt ID: #${payment.id}`, 20, 60);
-        doc.text(`Date: ${new Date(payment.payment_date).toLocaleDateString()}`, 140, 60);
+        doc.text(`Receipt ID: ${receiptId}`, 20, 65);
+        doc.text(`Date: ${dateObj.toLocaleDateString()}`, 190, 65, { align: 'right' });
 
         // Client Info
         doc.setFontSize(14);
-        doc.text('Received From:', 20, 80);
+        doc.text('Received From:', 20, 85);
         doc.setFontSize(11);
         doc.setTextColor(50);
 
@@ -452,13 +466,17 @@ ${secondPartyDetails}`;
         const clientPhone = subscription.users?.phone || '';
         const suite = subscription.suite_number ? `Suite #${subscription.suite_number}` : '';
 
-        doc.text(clientName, 20, 90);
-        if (clientPhone) doc.text(clientPhone, 20, 96);
-        if (suite) doc.text(suite, 20, 102);
+        doc.text(clientName, 20, 95);
+        let yPos = 101;
+        if (clientPhone) {
+            doc.text(clientPhone, 20, yPos);
+            yPos += 6;
+        }
+        if (suite) doc.text(suite, 20, yPos);
 
         // Payment Table
         autoTable(doc, {
-            startY: 115,
+            startY: 120,
             head: [['Description', 'Payment Mode', 'Amount']],
             body: [
                 [
