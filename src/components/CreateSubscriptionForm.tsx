@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUsers, getPlans, createSubscription } from '../services/api';
+import { getUsers, getPlans, createSubscription, createPayment } from '../services/api';
 import type { User, Plan } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import CreateUserModal from './CreateUserModal'; // Reusing this
@@ -38,7 +38,8 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
         start_date: '',
         expiry_date: '',
         purchase_amount: '',   // string for input
-        received_amount: '',   // string for input
+        initial_payment: '',   // string for input - renamed from received_amount
+        payment_type: 'Bank Transfer' as 'Bank Transfer' | 'Cash',
 
         // Step 3
         signatory_type: 'individual' as 'company' | 'individual',
@@ -100,14 +101,27 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            await createSubscription({
+            // 1. Create Subscription with 0 received amount initially
+            const newSub = await createSubscription({
                 ...formData,
                 start_date: formData.start_date || undefined,
                 expiry_date: formData.expiry_date || undefined,
                 purchase_amount: Number(formData.purchase_amount),
-                received_amount: Number(formData.received_amount || 0),
+                received_amount: 0, // Always 0 initially, updated via trigger on payment creation
                 status: 'Advance Received', // Default initial status
             });
+
+            // 2. If Initial Payment is entered, create a Payment Record
+            if (formData.initial_payment && Number(formData.initial_payment) > 0) {
+                await createPayment({
+                    subscription_id: newSub.id,
+                    user_id: formData.user_id, // Ensure this maps correctly if needed
+                    amount: Number(formData.initial_payment),
+                    payment_date: formData.purchased_date, // Use purchased date as payment date
+                    payment_type: formData.payment_type,
+                });
+            }
+
             addToast('Subscription created successfully!', 'success');
             onSuccess();
         } catch (err: any) {
@@ -265,9 +279,19 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                         value={formData.purchase_amount} onChange={(e) => setFormData({ ...formData, purchase_amount: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Received Amount (₹)</label>
-                                    <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        value={formData.received_amount} onChange={(e) => setFormData({ ...formData, received_amount: e.target.value })} />
+                                    <label className="block text-sm font-medium text-gray-700">Initial Payment (₹)</label>
+                                    <div className="flex gap-2">
+                                        <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            value={formData.initial_payment} onChange={(e) => setFormData({ ...formData, initial_payment: e.target.value })} />
+                                        <select
+                                            className="mt-1 block w-1/3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            value={formData.payment_type}
+                                            onChange={(e) => setFormData({ ...formData, payment_type: e.target.value as 'Bank Transfer' | 'Cash' })}
+                                        >
+                                            <option value="Bank Transfer">Bank</option>
+                                            <option value="Cash">Cash</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
