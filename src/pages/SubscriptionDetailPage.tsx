@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers } from '../services/api';
-import type { SubscriptionStatus, RubberStampStatus, NameBoardStatus, SubscriptionFile, SubscriptionFileLabel } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers, getPayments, getAdminUsers } from '../services/api';
+import type { SubscriptionStatus, RubberStampStatus, NameBoardStatus, SubscriptionFile, SubscriptionFileLabel, Payment } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
 import SuffixSelectionModal from '../components/SuffixSelectionModal';
+import AddPaymentModal from '../components/AddPaymentModal';
 
 interface Log {
     id: string;
@@ -23,6 +24,8 @@ export default function SubscriptionDetailPage() {
     const [files, setFiles] = useState<SubscriptionFile[]>([]);
     const [plans, setPlans] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
+    const [adminUsers, setAdminUsers] = useState<any[]>([]);
+    const [payments, setPayments] = useState<Payment[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -51,6 +54,9 @@ export default function SubscriptionDetailPage() {
     const [documentsEditData, setDocumentsEditData] = useState<any>({});
     const [showSuffixModal, setShowSuffixModal] = useState(false);
 
+    // Payments State
+    const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
@@ -70,18 +76,22 @@ export default function SubscriptionDetailPage() {
         if (!id) return;
         setLoading(true);
         try {
-            const [subData, logsData, filesData, plansData, usersData] = await Promise.all([
+            const [subData, logsData, filesData, plansData, usersData, paymentsData, adminUsersData] = await Promise.all([
                 getSubscription(id),
                 getSubscriptionLogs(id),
                 getSubscriptionFiles(id),
                 getPlans(),
-                getUsers()
+                getUsers(),
+                getPayments(id),
+                getAdminUsers()
             ]);
             setSubscription(subData);
             setLogs(logsData as any[]);
             setFiles(filesData);
             setPlans(plansData);
             setUsers(usersData);
+            setPayments(paymentsData);
+            setAdminUsers(adminUsersData);
 
             // Initialize edit state
             if (subData) {
@@ -1452,6 +1462,49 @@ ${secondPartyDetails}`;
                         </div>
                     </div>
 
+                    {/* Payments Card */}
+                    <div className="bg-white shadow sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200">
+                            <div>
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Payments</h3>
+                                <p className="mt-1 max-w-2xl text-sm text-gray-500">Track payments for this subscription.</p>
+                            </div>
+                            <button
+                                onClick={() => setIsAddPaymentModalOpen(true)}
+                                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                            >
+                                Add Payment
+                            </button>
+                        </div>
+                        <div className="px-4 py-5 sm:p-6">
+                            {payments.length === 0 ? (
+                                <p className="text-sm text-gray-500">No payments recorded.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {payments.map((payment) => (
+                                        <div key={payment.id} className="flex items-center justify-between border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">₹{payment.amount.toLocaleString()}</p>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                    <span>{payment.payment_type || 'Bank Transfer'}</span>
+                                                    <span>•</span>
+                                                    <span>Recorded by {(() => {
+                                                        const admin = adminUsers.find(u => u.user_id === payment.added_by);
+                                                        return admin?.name || 'Unknown';
+                                                    })()}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-gray-700">{new Date(payment.payment_date).toLocaleDateString()}</p>
+                                                <p className="text-xs text-gray-400">ID: {payment.id}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Files Section */}
                     <div className="bg-white shadow sm:rounded-lg">
                         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
@@ -1795,6 +1848,14 @@ ${address}`;
                     handleGenerateDocuments(suffix);
                     setShowSuffixModal(false);
                 }}
+            />
+            {/* Payments Modal */}
+            <AddPaymentModal
+                subscriptionId={id || ''}
+                userId={subscription?.user_id || ''}
+                isOpen={isAddPaymentModalOpen}
+                onClose={() => setIsAddPaymentModalOpen(false)}
+                onSuccess={() => fetchData()}
             />
         </div >
     );

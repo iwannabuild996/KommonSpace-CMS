@@ -63,6 +63,16 @@ export interface SubscriptionCompany {
     created_at?: string;
 }
 
+export interface Payment {
+    id: number; // sequential integer
+    subscription_id: string;
+    user_id: string;
+    added_by?: string;
+    amount: number;
+    payment_date: string;
+    created_at?: string;
+}
+
 export interface Subscription {
     id: string;
     user_id: string;
@@ -126,6 +136,22 @@ export const updateUser = async (id: string, payload: Partial<User>) => {
 
     if (error) throw error;
     return data as User;
+};
+
+export interface AdminUser {
+    user_id: string;
+    role: string;
+    name?: string;
+}
+
+// 1.6 Get Admin Users
+export const getAdminUsers = async () => {
+    const { data, error } = await supabase
+        .from('admin_users')
+        .select('*');
+
+    if (error) throw error;
+    return data as AdminUser[];
 };
 
 // 2. Get Users (optional search query)
@@ -496,3 +522,52 @@ export const getSubscriptionFiles = async (subscriptionId: string) => {
 
     return filesWithUrls;
 };
+
+export interface Payment {
+    id: number;
+    subscription_id: string;
+    user_id: string;
+    added_by?: string;
+    amount: number;
+    payment_date: string;
+    payment_type?: string;
+    created_at?: string;
+}
+
+// 12. Create Payment
+export const createPayment = async (payload: {
+    subscription_id: string;
+    user_id: string;
+    amount: number;
+    payment_date?: string;
+    payment_type: string;
+}) => {
+    const user = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+        .from('payments')
+        .insert({
+            ...payload,
+            added_by: user.data.user?.id
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Payment;
+};
+
+// 13. Get Payments
+export const getPayments = async (subscriptionId?: string) => {
+    let query = supabase.from('payments').select('*').order('payment_date', { ascending: false });
+
+    if (subscriptionId) {
+        query = query.eq('subscription_id', subscriptionId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Payment[];
+};
+
+
