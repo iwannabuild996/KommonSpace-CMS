@@ -430,7 +430,7 @@ ${secondPartyDetails}`;
 
         // Header
         doc.setFontSize(22);
-        doc.setTextColor(79, 70, 229); // Indigo 600
+        doc.setTextColor(0); // Indigo 600
         doc.text('PAYMENT RECEIPT', 190, 25, { align: 'right' });
 
         // Company Info
@@ -438,6 +438,7 @@ ${secondPartyDetails}`;
         doc.setTextColor(100);
         doc.text('Loomian Developers Private Limited', 190, 35, { align: 'right' });
         doc.text('Kakkanad, Kochi, Kerala, 682030', 190, 40, { align: 'right' });
+        doc.text('kommonspace@gmail.com/04842910516', 190, 45, { align: 'right' });
 
         // Divider
         doc.setLineWidth(0.5);
@@ -449,7 +450,7 @@ ${secondPartyDetails}`;
         const day = String(dateObj.getDate()).padStart(2, '0');
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const year = dateObj.getFullYear();
-        const receiptId = `${day}${month}${year}/${payment.id}`;
+        const receiptId = `${day}${month}${year}${payment.id}`;
 
         // Receipt Details
         doc.setFontSize(12);
