@@ -557,6 +557,19 @@ export const createPayment = async (payload: {
     return data as Payment;
 };
 
+// 12.5 Update Payment
+export const updatePayment = async (id: number, payload: Partial<Payment>) => {
+    const { data, error } = await supabase
+        .from('payments')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Payment;
+};
+
 // 13. Get Payments
 export const getPayments = async (subscriptionId?: string) => {
     let query = supabase.from('payments').select('*').order('payment_date', { ascending: false });

@@ -59,6 +59,7 @@ export default function SubscriptionDetailPage() {
 
     // Payments State
     const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+    const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
 
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -746,8 +747,9 @@ ${secondPartyDetails}`;
                                             <input
                                                 type="number"
                                                 value={infoEditData.received_amount || ''}
-                                                onChange={(e) => setInfoEditData({ ...infoEditData, received_amount: parseFloat(e.target.value) })}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                readOnly
+                                                className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border cursor-not-allowed"
+                                                title="Received amount is automatically calculated from payments"
                                             />
                                         </div>
                                     </div>
@@ -1590,18 +1592,33 @@ ${secondPartyDetails}`;
                                                     })()}</span>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right flex flex-col items-end gap-1">
                                                 <p className="text-sm text-gray-700">{new Date(payment.payment_date).toLocaleDateString()}</p>
                                                 <p className="text-xs text-gray-400">ID: {payment.id}</p>
-                                                <button
-                                                    onClick={() => handleDownloadReceipt(payment)}
-                                                    className="inline-flex items-center gap-1 mt-1 text-indigo-600 hover:text-indigo-500 text-xs font-medium"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v4.69l-2.22-2.22a.75.75 0 10-1.06 1.06l3.5 3.5a.75.75 0 001.06 0l3.5-3.5a.75.75 0 00-1.06-1.06l-2.22 2.22V6.75z" clipRule="evenodd" />
-                                                    </svg>
-                                                    Receipt
-                                                </button>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingPayment(payment);
+                                                            setIsAddPaymentModalOpen(true);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-500 text-xs font-medium"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                            <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                                                            <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadReceipt(payment)}
+                                                        className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-500 text-xs font-medium"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v4.69l-2.22-2.22a.75.75 0 10-1.06 1.06l3.5 3.5a.75.75 0 001.06 0l3.5-3.5a.75.75 0 00-1.06-1.06l-2.22 2.22V6.75z" clipRule="evenodd" />
+                                                        </svg>
+                                                        Receipt
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -1959,8 +1976,15 @@ ${address}`;
                 subscriptionId={id || ''}
                 userId={subscription?.user_id || ''}
                 isOpen={isAddPaymentModalOpen}
-                onClose={() => setIsAddPaymentModalOpen(false)}
-                onSuccess={() => fetchData()}
+                onClose={() => {
+                    setIsAddPaymentModalOpen(false);
+                    setEditingPayment(null);
+                }}
+                onSuccess={() => {
+                    fetchData();
+                    setEditingPayment(null);
+                }}
+                initialData={editingPayment}
             />
         </div >
     );

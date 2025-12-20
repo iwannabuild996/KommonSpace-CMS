@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { createPayment } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { createPayment, updatePayment } from '../services/api';
+import type { Payment } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
 interface AddPaymentModalProps {
@@ -8,14 +9,29 @@ interface AddPaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    initialData?: Payment | null;
 }
 
-const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ subscriptionId, userId, isOpen, onClose, onSuccess }) => {
+const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ subscriptionId, userId, isOpen, onClose, onSuccess, initialData }) => {
     const [amount, setAmount] = useState('');
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
     const [paymentType, setPaymentType] = useState('Bank Transfer');
     const [isLoading, setIsLoading] = useState(false);
     const { addToast } = useToast();
+
+    useEffect(() => {
+        if (isOpen) {
+            if (initialData) {
+                setAmount(initialData.amount.toString());
+                setPaymentDate(new Date(initialData.payment_date).toISOString().split('T')[0]);
+                setPaymentType(initialData.payment_type || 'Bank Transfer');
+            } else {
+                setAmount('');
+                setPaymentDate(new Date().toISOString().split('T')[0]);
+                setPaymentType('Bank Transfer');
+            }
+        }
+    }, [isOpen, initialData]);
 
     if (!isOpen) return null;
 
@@ -24,22 +40,34 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ subscriptionId, userI
         setIsLoading(true);
 
         try {
-            await createPayment({
-                subscription_id: subscriptionId,
-                user_id: userId,
-                amount: parseFloat(amount),
-                payment_date: paymentDate,
-                payment_type: paymentType
-            });
+            if (initialData) {
+                await updatePayment(initialData.id, {
+                    amount: parseFloat(amount),
+                    payment_date: paymentDate,
+                    payment_type: paymentType
+                });
+                addToast('Payment updated successfully', 'success');
+            } else {
+                await createPayment({
+                    subscription_id: subscriptionId,
+                    user_id: userId,
+                    amount: parseFloat(amount),
+                    payment_date: paymentDate,
+                    payment_type: paymentType
+                });
+                addToast('Payment added successfully', 'success');
+            }
 
-            addToast('Payment added successfully', 'success');
             onSuccess();
             onClose();
-            setAmount('');
-            setPaymentDate(new Date().toISOString().split('T')[0]);
-        } catch (error) {
-            console.error('Error adding payment:', error);
-            addToast('Failed to add payment', 'error');
+            if (!initialData) {
+                setAmount('');
+                setPaymentDate(new Date().toISOString().split('T')[0]);
+                setPaymentType('Bank Transfer');
+            }
+        } catch (error: any) {
+            console.error('Error saving payment:', error);
+            addToast(error.message || 'Failed to save payment', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -117,7 +145,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ subscriptionId, userI
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Adding...' : 'Add Payment'}
+                            {isLoading ? 'Saving...' : (initialData ? 'Update Payment' : 'Add Payment')}
                         </button>
                     </div>
                 </form>
