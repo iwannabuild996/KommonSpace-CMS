@@ -60,6 +60,24 @@ CREATE TYPE bundle_item_type AS ENUM (
   'CONSUMABLE'
 );
 
+CREATE TABLE consumables (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  price numeric NOT NULL DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now()
+);
+
+-- Enable RLS for consumables
+ALTER TABLE consumables ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow admin access" ON consumables
+FOR ALL TO authenticated
+USING (is_admin());
+
+CREATE POLICY "Allow staff access" ON consumables
+FOR ALL TO authenticated
+USING (is_staff());
+
 CREATE TABLE bundle_items (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   bundle_id uuid NOT NULL REFERENCES bundles(id),
@@ -71,6 +89,9 @@ CREATE TABLE bundle_items (
 
   -- Services
   service_id uuid REFERENCES services(id),
+
+  -- Consumables
+  consumable_id uuid REFERENCES consumables(id),
 
   description text,
   amount numeric NOT NULL,
@@ -177,3 +198,28 @@ USING (is_admin());
 CREATE POLICY "Allow staff access" ON bundle_items
 FOR ALL TO authenticated
 USING (is_staff());
+
+
+-- Create consumables table
+CREATE TABLE consumables (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  price numeric NOT NULL DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE consumables ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow admin access" ON consumables
+FOR ALL TO authenticated
+USING (is_admin());
+
+CREATE POLICY "Allow staff access" ON consumables
+FOR ALL TO authenticated
+USING (is_staff());
+
+-- Add consumable_id to bundle_items
+ALTER TABLE bundle_items
+ADD COLUMN consumable_id uuid REFERENCES consumables(id);
+

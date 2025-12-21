@@ -53,9 +53,14 @@ export interface ServiceWorkflow {
     status_code: string;
     status_label: string;
     step_order: number;
-    is_terminal: boolean;
-    is_failure: boolean;
     is_active: boolean;
+    created_at?: string;
+}
+
+export interface Consumable {
+    id: string;
+    name: string;
+    price: number;
     created_at?: string;
 }
 
@@ -70,7 +75,7 @@ export interface Bundle {
 export interface BundleItem {
     id: string;
     bundle_id: string;
-    item_type: 'service' | 'plan';
+    item_type: 'service' | 'plan' | 'consumable';
     item_id: string;
     override_price?: number; // Maps to 'amount' in DB
     created_at?: string;
@@ -78,6 +83,7 @@ export interface BundleItem {
     // Joined fields (optional, depend on query)
     services?: Service;  // Supabase returns an object for single relation if configured, or array
     plans?: Plan;
+    consumables?: Consumable;
 }
 
 export interface SubscriptionSignatory {
@@ -705,7 +711,18 @@ export const updateServiceWorkflow = async (id: string, updates: Partial<Service
     return data as ServiceWorkflow;
 };
 
-// --- Bundles ---
+
+// --- Consumables ---
+
+export const getConsumables = async () => {
+    const { data, error } = await supabase
+        .from('consumables')
+        .select('*')
+        .order('name');
+
+    if (error) throw error;
+    return data as Consumable[];
+};
 
 export const getBundles = async () => {
     const { data, error } = await supabase
@@ -757,7 +774,8 @@ export const getBundleItems = async (bundleId: string) => {
         .select(`
             *,
             services:services(*),
-            plans:plans(*)
+            plans:plans(*),
+            consumables:consumables(*)
         `)
         .eq('bundle_id', bundleId);
 
@@ -766,8 +784,8 @@ export const getBundleItems = async (bundleId: string) => {
     // Map back to frontend interface
     return data?.map((item: any) => ({
         ...item,
-        item_id: item.service_id || item.plan_id,
-        item_type: item.item_type === 'SERVICE' ? 'service' : 'plan',
+        item_id: item.service_id || item.plan_id || item.consumable_id,
+        item_type: item.item_type === 'SERVICE' ? 'service' : (item.item_type === 'CONSUMABLE' ? 'consumable' : 'plan'),
         override_price: item.amount
     })) as BundleItem[];
 };
@@ -778,13 +796,15 @@ export const addBundleItem = async (item: Partial<BundleItem>) => {
         bundle_id: item.bundle_id,
         amount: item.override_price || 0,
         // Map item_type
-        item_type: item.item_type === 'service' ? 'SERVICE' : 'VO',
+        item_type: item.item_type === 'service' ? 'SERVICE' : (item.item_type === 'consumable' ? 'CONSUMABLE' : 'VO'),
     };
 
     if (item.item_type === 'service') {
         dbItem.service_id = item.item_id;
     } else if (item.item_type === 'plan') {
         dbItem.plan_id = item.item_id;
+    } else if (item.item_type === 'consumable') {
+        dbItem.consumable_id = item.item_id;
     }
 
     const { data, error } = await supabase
@@ -798,8 +818,31 @@ export const addBundleItem = async (item: Partial<BundleItem>) => {
     // Map response back
     return {
         ...data,
-        item_id: data.service_id || data.plan_id,
-        item_type: data.item_type === 'SERVICE' ? 'service' : 'plan',
+        item_id: data.service_id || data.plan_id || data.consumable_id,
+        item_type: data.item_type === 'SERVICE' ? 'service' : (data.item_type === 'CONSUMABLE' ? 'consumable' : 'plan'),
+        override_price: data.amount
+    } as BundleItem;
+};
+
+export const updateBundleItem = async (id: string, updates: Partial<BundleItem>) => {
+    const dbUpdates: any = {};
+    if (updates.override_price !== undefined) {
+        dbUpdates.amount = updates.override_price;
+    }
+
+    const { data, error } = await supabase
+        .from('bundle_items')
+        .update(dbUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        ...data,
+        item_id: data.service_id || data.plan_id || data.consumable_id,
+        item_type: data.item_type === 'SERVICE' ? 'service' : (data.item_type === 'CONSUMABLE' ? 'consumable' : 'plan'),
         override_price: data.amount
     } as BundleItem;
 };

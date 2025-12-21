@@ -4,11 +4,13 @@ import {
     updateBundle,
     getBundleItems,
     addBundleItem,
+    updateBundleItem,
     removeBundleItem,
     getServices,
-    getPlans
+    getPlans,
+    getConsumables
 } from '../services/api';
-import type { Bundle, BundleItem, Service, Plan } from '../services/api';
+import type { Bundle, BundleItem, Service, Plan, Consumable } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
 interface BundleFormProps {
@@ -32,9 +34,13 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
     // Items Data
     const [items, setItems] = useState<BundleItem[]>([]);
     const [availableServices, setAvailableServices] = useState<Service[]>([]);
+    const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
+    const [availableConsumables, setAvailableConsumables] = useState<Consumable[]>([]);
 
     // New Item State
-    const [newItemType] = useState<'service'>('service');
+    // New Item State / Edit State
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [newItemType, setNewItemType] = useState<'service' | 'plan' | 'consumable'>('service');
     const [newItemId, setNewItemId] = useState('');
     const [overridePrice, setOverridePrice] = useState('');
 
@@ -42,10 +48,16 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
     useEffect(() => {
         const loadDependencies = async () => {
             try {
-                const servicesData = await getServices();
+                const [servicesData, plansData, consumablesData] = await Promise.all([
+                    getServices(),
+                    getPlans(),
+                    getConsumables()
+                ]);
                 setAvailableServices(servicesData || []);
+                setAvailablePlans(plansData || []);
+                setAvailableConsumables(consumablesData || []);
             } catch (err) {
-                console.error("Failed to load services", err);
+                console.error("Failed to load dependencies", err);
             }
         };
 
@@ -104,13 +116,6 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                 addToast('Bundle created successfully', 'success');
             }
 
-            // If we just created a bundle, we might want to stay open to add items? 
-            // For now, let's close on success as per standard flow, or we could switch mode.
-            // But items are managed separately in this form... 
-            // If it's a new bundle, we can't add items until it's created.
-            // So for "Create", we initially just save the bundle.
-            // Items can only be added to an existing bundle.
-
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -122,24 +127,51 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
     };
 
     const handleAddItem = async () => {
-        if (!initialData) return; // Can't add items to unsaved bundle (UI should prevent this)
+        if (!initialData) return;
         if (!newItemId) return;
 
         try {
-            await addBundleItem({
-                bundle_id: initialData.id,
-                item_type: newItemType,
-                item_id: newItemId,
-                override_price: overridePrice ? parseFloat(overridePrice) : 0,
-            });
-            addToast('Item added', 'success');
+            if (editingItemId) {
+                // Update Logic
+                await updateBundleItem(editingItemId, {
+                    override_price: overridePrice ? parseFloat(overridePrice) : 0,
+                });
+                addToast('Item updated', 'success');
+                setEditingItemId(null); // Exit edit mode
+            } else {
+                // Add Logic
+                await addBundleItem({
+                    bundle_id: initialData.id,
+                    item_type: newItemType,
+                    item_id: newItemId,
+                    override_price: overridePrice ? parseFloat(overridePrice) : 0,
+                });
+                addToast('Item added', 'success');
+            }
+
             fetchItems(initialData.id);
+            // Reset fields
             setNewItemId('');
             setOverridePrice('');
+            setNewItemType('service');
         } catch (err: any) {
             console.error(err);
-            addToast(err.message || 'Failed to add item', 'error');
+            addToast(err.message || 'Failed to save item', 'error');
         }
+    };
+
+    const handleEditItem = (item: BundleItem) => {
+        setEditingItemId(item.id);
+        setNewItemType(item.item_type);
+        setNewItemId(item.item_id);
+        setOverridePrice(item.override_price?.toString() || '');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingItemId(null);
+        setNewItemId('');
+        setOverridePrice('');
+        setNewItemType('service');
     };
 
     const handleRemoveItem = async (itemId: string) => {
@@ -237,47 +269,125 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                                 <h4 className="text-base font-semibold leading-6 text-gray-900 mb-4">Bundle Items</h4>
 
                                 {/* Add Item Form */}
-                                <div className="flex gap-2 items-end mb-4 bg-gray-50 p-3 rounded-md">
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Service</label>
-                                        <select
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                            value={newItemId}
-                                            onChange={(e) => {
-                                                setNewItemId(e.target.value);
-                                                // Auto-populate price
-                                                const service = availableServices.find(s => s.id === e.target.value);
-                                                if (service) {
-                                                    setOverridePrice(service.price.toString());
-                                                }
-                                            }}
-                                        >
-                                            <option value="">Select Service...</option>
-                                            {availableServices.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name} ({s.code}) - ₹{s.price}</option>
-                                            ))}
-                                        </select>
+                                <div className="space-y-3 bg-gray-50 p-3 rounded-md mb-4">
+                                    {/* Type Selection */}
+                                    <div className="flex gap-4">
+                                        <label className="inline-flex items-center">
+                                            <input
+                                                type="radio"
+                                                className="form-radio"
+                                                name="itemType"
+                                                value="service"
+                                                checked={newItemType === 'service'}
+                                                onChange={() => {
+                                                    setNewItemType('service');
+                                                    setNewItemId('');
+                                                    setOverridePrice('');
+                                                }}
+                                            />
+                                            <span className="ml-2 text-sm text-gray-700">Service</span>
+                                        </label>
+                                        <label className="inline-flex items-center">
+                                            <input
+                                                type="radio"
+                                                className="form-radio"
+                                                name="itemType"
+                                                value="plan"
+                                                checked={newItemType === 'plan'}
+                                                onChange={() => {
+                                                    setNewItemType('plan');
+                                                    setNewItemId('');
+                                                    setOverridePrice('');
+                                                }}
+                                            />
+                                            <span className="ml-2 text-sm text-gray-700">Plan</span>
+                                        </label>
+                                        <label className="inline-flex items-center">
+                                            <input
+                                                type="radio"
+                                                className="form-radio"
+                                                name="itemType"
+                                                value="consumable"
+                                                checked={newItemType === 'consumable'}
+                                                onChange={() => {
+                                                    setNewItemType('consumable');
+                                                    setNewItemId('');
+                                                    setOverridePrice('');
+                                                }}
+                                            />
+                                            <span className="ml-2 text-sm text-gray-700">Consumable</span>
+                                        </label>
                                     </div>
-                                    <div className="w-32">
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Price in Bundle</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                            value={overridePrice}
-                                            onChange={(e) => setOverridePrice(e.target.value)}
-                                            placeholder="Auto"
-                                        />
+
+                                    <div className="flex gap-2 items-end">
+                                        <div className="flex-1">
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                {newItemType === 'service' ? 'Service' : (newItemType === 'consumable' ? 'Consumable' : 'Plan')}
+                                            </label>
+                                            <select
+                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={newItemId}
+                                                onChange={(e) => {
+                                                    setNewItemId(e.target.value);
+                                                    // Auto-populate price based on selection
+                                                    let price = 0;
+                                                    if (newItemType === 'service') {
+                                                        const service = availableServices.find(s => s.id === e.target.value);
+                                                        if (service) price = service.price;
+                                                    } else if (newItemType === 'plan') {
+                                                        const plan = availablePlans.find(p => p.id === e.target.value);
+                                                        if (plan && plan.price) price = plan.price;
+                                                    } else if (newItemType === 'consumable') {
+                                                        const consumable = availableConsumables.find(c => c.id === e.target.value);
+                                                        if (consumable) price = consumable.price;
+                                                    }
+                                                    setOverridePrice(price.toString());
+                                                }}
+                                            >
+                                                <option value="">Select {newItemType === 'service' ? 'Service' : (newItemType === 'consumable' ? 'Consumable' : 'Plan')}...</option>
+                                                {newItemType === 'service' && availableServices.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name} ({s.code}) - ₹{s.price}</option>
+                                                ))}
+                                                {newItemType === 'plan' && availablePlans.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name} - ₹{p.price}</option>
+                                                ))}
+                                                {newItemType === 'consumable' && availableConsumables.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name} - ₹{c.price}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="w-32">
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Price in Bundle</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={overridePrice}
+                                                onChange={(e) => setOverridePrice(e.target.value)}
+                                                placeholder="Auto"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleAddItem}
+                                                disabled={!newItemId}
+                                                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                                            >
+                                                {editingItemId ? 'Update' : 'Add'}
+                                            </button>
+                                            {editingItemId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCancelEdit}
+                                                    className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleAddItem}
-                                        disabled={!newItemId}
-                                        className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-                                    >
-                                        Add
-                                    </button>
                                 </div>
 
                                 {/* Items List */}
@@ -286,25 +396,40 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th scope="col" className="py-2 pl-3 text-left text-xs font-medium text-gray-500">Item</th>
+                                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">Type</th>
                                                 <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">Price</th>
                                                 <th scope="col" className="relative py-2 pl-3 pr-4 sm:pr-6">
-                                                    <span className="sr-only">Remove</span>
+                                                    <span className="sr-only">Actions</span>
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white">
                                             {items.length === 0 ? (
-                                                <tr><td colSpan={3} className="py-4 text-center text-sm text-gray-500">No items in this bundle.</td></tr>
+                                                <tr><td colSpan={4} className="py-4 text-center text-sm text-gray-500">No items in this bundle.</td></tr>
                                             ) : (
                                                 items.map((item) => (
                                                     <tr key={item.id}>
                                                         <td className="whitespace-nowrap py-3 pl-3 text-sm text-gray-900">
-                                                            {item.services?.name || 'Unknown Service'}
+                                                            {item.item_type === 'service'
+                                                                ? (item.services?.name || 'Unknown Service')
+                                                                : (item.item_type === 'consumable'
+                                                                    ? (item.consumables?.name || 'Unknown Consumable')
+                                                                    : (item.plans?.name || 'Unknown Plan'))}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500 capitalize">
+                                                            {item.item_type}
                                                         </td>
                                                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                                                             ₹{item.override_price}
                                                         </td>
                                                         <td className="relative whitespace-nowrap py-3 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleEditItem(item)}
+                                                                className="text-indigo-600 hover:text-indigo-900 mr-4"
+                                                            >
+                                                                Edit
+                                                            </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveItem(item.id)}
