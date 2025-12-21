@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getUsers, getPlans, createSubscription, createPayment } from '../services/api';
-import type { User, Plan } from '../services/api';
+import { getUsers, getPlans, getBundles, getBundleItems, createSubscription, createPayment } from '../services/api';
+import type { User, Plan, Bundle } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import CreateUserModal from './CreateUserModal'; // Reusing this
 
@@ -22,6 +22,10 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
     // Data Sources
     const [users, setUsers] = useState<User[]>([]);
     const [plans, setPlans] = useState<Plan[]>([]);
+    const [bundles, setBundles] = useState<Bundle[]>([]); // New
+
+    // UI State
+    const [selectionType, setSelectionType] = useState<'plan' | 'bundle'>('plan');
 
     // Search State
     const [userSearch, setUserSearch] = useState('');
@@ -31,6 +35,7 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
         // Step 1
         user_id: '',
         plan_id: '',
+        bundle_id: '', // New
         suite_number: '',
 
         // Step 2
@@ -38,6 +43,7 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
         start_date: '',
         expiry_date: '',
         purchase_amount: '',   // string for input
+        renewal_amount: '',    // string for input - New field
         initial_payment: '',   // string for input - renamed from received_amount
         payment_type: 'Bank Transfer' as 'Bank Transfer' | 'Cash',
 
@@ -58,9 +64,10 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
 
     const loadData = async () => {
         try {
-            const [fetchedUsers, fetchedPlans] = await Promise.all([getUsers(), getPlans()]);
+            const [fetchedUsers, fetchedPlans, fetchedBundles] = await Promise.all([getUsers(), getPlans(), getBundles()]);
             setUsers(fetchedUsers || []);
             setPlans(fetchedPlans || []);
+            setBundles(fetchedBundles || []);
         } catch (e) {
             addToast('Failed to load users or plans', 'error');
         }
@@ -70,12 +77,15 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
         switch (step) {
             case 0:
                 if (!formData.user_id) return 'Please select a user';
-                if (!formData.plan_id) return 'Please select a plan';
+                if (selectionType === 'plan' && !formData.plan_id) return 'Please select a plan';
+                if (selectionType === 'bundle' && !formData.bundle_id) return 'Please select a bundle';
                 if (!formData.suite_number) return 'Please enter a suite number';
                 return null;
             case 1:
                 if (!formData.purchased_date) return 'Purchase date is required';
                 if (!formData.purchase_amount || isNaN(Number(formData.purchase_amount))) return 'Valid purchase amount is required';
+                // renewal_amount is optional, but if present must be number
+                if (formData.renewal_amount && isNaN(Number(formData.renewal_amount))) return 'Valid renewal amount is required';
                 return null;
             case 2:
                 // All fields in Signatory & Company are optional
@@ -101,12 +111,36 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            // 1. Create Subscription with 0 received amount initially
+            // 1. Prepare data
+            let finalPlanId = formData.plan_id;
+
+            // If Bundle selected, fetch its items to find the Plan
+            if (formData.bundle_id && !finalPlanId) {
+                const bundleItems = await getBundleItems(formData.bundle_id);
+                const planItem = bundleItems?.find(item => item.item_type === 'plan' || item.plans);
+                if (planItem && (planItem.item_id || planItem.plans?.id)) {
+                    finalPlanId = planItem.item_id || planItem.plans?.id || '';
+                }
+
+                if (!finalPlanId) {
+                    // Fallback or error if strictly required. 
+                    // User said "always need to fill", but if bundle has no plan, we might just proceed with empty?
+                    // For now, let's warn but proceed, or throw error? 
+                    // Given constraints, better to throw if really required, but let's try to proceed.
+                    // Actually, if user insists "always need to fill", we should probably error if missing.
+                    throw new Error("Selected bundle does not contain a valid Plan.");
+                }
+            }
+
+            // 1. Create Subscription
             const newSub = await createSubscription({
                 ...formData,
+                plan_id: finalPlanId,
+                bundle_id: formData.bundle_id || undefined, // Set to undefined if empty string to avoid invalid input syntax for type uuid
                 start_date: formData.start_date || undefined,
                 expiry_date: formData.expiry_date || undefined,
                 purchase_amount: Number(formData.purchase_amount),
+                renewal_amount: formData.renewal_amount ? Number(formData.renewal_amount) : undefined, // Add to payload
                 received_amount: 0, // Always 0 initially, updated via trigger on payment creation
                 status: 'Advance Received', // Default initial status
             });
@@ -134,6 +168,7 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
 
     const selectedUser = users.find(u => u.id === formData.user_id);
     const selectedPlan = plans.find(p => p.id === formData.plan_id);
+    const selectedBundle = bundles.find(b => b.id === formData.bundle_id);
 
     const filteredUsers = users.filter(user =>
         user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -222,22 +257,71 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                 </div>
 
                                 <div className="col-span-2 sm:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700">Plan</label>
-                                    <select
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        value={formData.plan_id}
-                                        onChange={(e) => {
-                                            const plan = plans.find(p => p.id === e.target.value);
-                                            setFormData({
-                                                ...formData,
-                                                plan_id: e.target.value,
-                                                purchase_amount: plan?.price ? plan.price.toString() : formData.purchase_amount
-                                            })
-                                        }}
-                                    >
-                                        <option value="">Select Plan</option>
-                                        {plans.map(p => <option key={p.id} value={p.id}>{p.name} - ₹{p.price}</option>)}
-                                    </select>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Subscription Type</label>
+                                    <div className="flex rounded-md shadow-sm mb-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectionType('plan');
+                                                setFormData({ ...formData, bundle_id: '', purchase_amount: '' });
+                                            }}
+                                            className={`relative inline-flex items-center rounded-l-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 focus:z-10 ${selectionType === 'plan' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                                        >
+                                            Plan
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectionType('bundle');
+                                                setFormData({ ...formData, plan_id: '', purchase_amount: '' });
+                                            }}
+                                            className={`relative -ml-px inline-flex items-center rounded-r-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 focus:z-10 ${selectionType === 'bundle' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                                        >
+                                            Bundle
+                                        </button>
+                                    </div>
+
+                                    {selectionType === 'plan' ? (
+                                        <>
+                                            <label className="block text-sm font-medium text-gray-700">Select Plan</label>
+                                            <select
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={formData.plan_id}
+                                                onChange={(e) => {
+                                                    const plan = plans.find(p => p.id === e.target.value);
+                                                    setFormData({
+                                                        ...formData,
+                                                        plan_id: e.target.value,
+                                                        bundle_id: '',
+                                                        purchase_amount: plan?.price ? plan.price.toString() : formData.purchase_amount
+                                                    })
+                                                }}
+                                            >
+                                                <option value="">Choose a Plan...</option>
+                                                {plans.map(p => <option key={p.id} value={p.id}>{p.name} - ₹{p.price}</option>)}
+                                            </select>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <label className="block text-sm font-medium text-gray-700">Select Bundle</label>
+                                            <select
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                                value={formData.bundle_id}
+                                                onChange={(e) => {
+                                                    const bundle = bundles.find(b => b.id === e.target.value);
+                                                    setFormData({
+                                                        ...formData,
+                                                        bundle_id: e.target.value,
+                                                        plan_id: '',
+                                                        purchase_amount: bundle?.price ? bundle.price.toString() : formData.purchase_amount
+                                                    })
+                                                }}
+                                            >
+                                                <option value="">Choose a Bundle...</option>
+                                                {bundles.map(b => <option key={b.id} value={b.id}>{b.name} - ₹{b.price}</option>)}
+                                            </select>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="col-span-2">
@@ -277,6 +361,11 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                     <label className="block text-sm font-medium text-gray-700">Purchase Amount (₹)</label>
                                     <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                         value={formData.purchase_amount} onChange={(e) => setFormData({ ...formData, purchase_amount: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Renewal Amount (₹)</label>
+                                    <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                        value={formData.renewal_amount} onChange={(e) => setFormData({ ...formData, renewal_amount: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Initial Payment (₹)</label>
@@ -400,8 +489,12 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                     <dd className="mt-1 text-sm text-gray-900">{selectedUser?.name}</dd>
                                 </div>
                                 <div className="sm:col-span-1">
-                                    <dt className="text-sm font-medium text-gray-500">Plan</dt>
-                                    <dd className="mt-1 text-sm text-gray-900">{selectedPlan?.name}</dd>
+                                    <dt className="text-sm font-medium text-gray-500">
+                                        {formData.plan_id ? 'Plan' : 'Bundle'}
+                                    </dt>
+                                    <dd className="mt-1 text-sm text-gray-900">
+                                        {formData.plan_id ? selectedPlan?.name : selectedBundle?.name}
+                                    </dd>
                                 </div>
                                 <div className="sm:col-span-1">
                                     <dt className="text-sm font-medium text-gray-500">Start Date</dt>
@@ -410,6 +503,10 @@ export default function CreateSubscriptionForm({ onSuccess, onCancel }: CreateSu
                                 <div className="sm:col-span-1">
                                     <dt className="text-sm font-medium text-gray-500">Amount</dt>
                                     <dd className="mt-1 text-sm text-gray-900">₹{formData.purchase_amount}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Renewal Amount</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">₹{formData.renewal_amount || '-'}</dd>
                                 </div>
                                 <div className="sm:col-span-1">
                                     <dt className="text-sm font-medium text-gray-500">Signatory Type</dt>

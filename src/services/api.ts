@@ -125,10 +125,12 @@ export interface Subscription {
     id: string;
     user_id: string;
     plan_id?: string;
+    bundle_id?: string; // New field
     purchased_date?: string;
     start_date?: string;
     expiry_date?: string;
     purchase_amount?: number;
+    renewal_amount?: number; // New field
     received_amount?: number;
     status: SubscriptionStatus;
     suite_number?: string;
@@ -148,6 +150,7 @@ export interface Subscription {
     subscription_companies?: SubscriptionCompany;
     users?: User;
     plans?: Plan;
+    bundles?: Bundle;
 }
 
 export interface SubscriptionLog {
@@ -298,10 +301,12 @@ export const createSubscription = async (
     const subscriptionData = {
         user_id: payload.user_id,
         plan_id: payload.plan_id,
+        bundle_id: payload.bundle_id,
         purchased_date: payload.purchased_date,
         start_date: payload.start_date,
         expiry_date: payload.expiry_date,
         purchase_amount: payload.purchase_amount,
+        renewal_amount: payload.renewal_amount, // New field,
         received_amount: payload.received_amount,
         status: initialStatus,
         suite_number: payload.suite_number,

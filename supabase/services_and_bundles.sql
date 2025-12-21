@@ -223,3 +223,6 @@ USING (is_staff());
 ALTER TABLE bundle_items
 ADD COLUMN consumable_id uuid REFERENCES consumables(id);
 
+ALTER TABLE subscriptions
+ADD COLUMN bundle_id uuid REFERENCES bundles(id);
+

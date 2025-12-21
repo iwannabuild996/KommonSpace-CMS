@@ -564,6 +564,7 @@ ${secondPartyDetails}`;
                                             start_date: subscription.start_date,
                                             expiry_date: subscription.expiry_date,
                                             purchase_amount: subscription.purchase_amount,
+                                            renewal_amount: subscription.renewal_amount, // Initialize edit state
                                             received_amount: subscription.received_amount,
                                             activities: subscription.activities || []
                                         });
@@ -602,6 +603,7 @@ ${secondPartyDetails}`;
                                             <dt className="text-sm font-medium text-gray-900">Financials</dt>
                                             <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
                                                 <p>Amount: ₹{subscription.purchase_amount}</p>
+                                                <p>Renewal Amount: ₹{subscription.renewal_amount || '-'}</p>
                                                 <p>Received: ₹{subscription.received_amount}</p>
                                             </dd>
                                         </div>
@@ -740,6 +742,15 @@ ${secondPartyDetails}`;
                                                 type="number"
                                                 value={infoEditData.purchase_amount || ''}
                                                 onChange={(e) => setInfoEditData({ ...infoEditData, purchase_amount: parseFloat(e.target.value) })}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Renewal Amount (₹)</label>
+                                            <input
+                                                type="number"
+                                                value={infoEditData.renewal_amount || ''}
+                                                onChange={(e) => setInfoEditData({ ...infoEditData, renewal_amount: parseFloat(e.target.value) })}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                             />
                                         </div>
