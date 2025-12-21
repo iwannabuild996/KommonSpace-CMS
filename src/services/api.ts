@@ -59,6 +59,28 @@ export interface ServiceWorkflow {
     created_at?: string;
 }
 
+export interface Bundle {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    created_at?: string;
+}
+
+export interface BundleItem {
+    id: string;
+    bundle_id: string;
+    item_type: 'service' | 'plan';
+    item_id: string;
+    quantity: number;
+    override_price?: number;
+    created_at?: string;
+
+    // Joined fields (optional, depend on query)
+    services?: Service;  // Supabase returns an object for single relation if configured, or array
+    plans?: Plan;
+}
+
 export interface SubscriptionSignatory {
     id: string;
     subscription_id: string;
@@ -683,6 +705,93 @@ export const updateServiceWorkflow = async (id: string, updates: Partial<Service
     if (error) throw error;
     return data as ServiceWorkflow;
 };
+
+// --- Bundles ---
+
+export const getBundles = async () => {
+    const { data, error } = await supabase
+        .from('bundles')
+        .select('*')
+        .order('name');
+
+    if (error) throw error;
+    return data as Bundle[];
+};
+
+export const createBundle = async (bundle: Partial<Bundle>) => {
+    const { data, error } = await supabase
+        .from('bundles')
+        .insert(bundle)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Bundle;
+};
+
+export const updateBundle = async (id: string, updates: Partial<Bundle>) => {
+    const { data, error } = await supabase
+        .from('bundles')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Bundle;
+};
+
+export const deleteBundle = async (id: string) => {
+    const { error } = await supabase
+        .from('bundles')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
+};
+
+// --- Bundle Items ---
+
+export const getBundleItems = async (bundleId: string) => {
+    // We want to fetch the related service or plan details
+    const { data, error } = await supabase
+        .from('bundle_items')
+        .select(`
+            *,
+            services:services(*),
+            plans:plans(*)
+        `)
+        .eq('bundle_id', bundleId);
+
+    if (error) throw error;
+
+    // Map back to frontend interface
+    return data?.map((item: any) => ({
+        ...item,
+        item_id: item.service_id || item.plan_id,
+        item_type: item.item_type === 'SERVICE' ? 'service' : 'plan'
+    })) as BundleItem[];
+};
+
+export const addBundleItem = async (item: Partial<BundleItem>) => {
+    const { data, error } = await supabase
+        .from('bundle_items')
+        .insert(item)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as BundleItem;
+};
+
+export const removeBundleItem = async (itemId: string) => {
+    const { error } = await supabase
+        .from('bundle_items')
+        .delete()
+        .eq('id', itemId);
+
+    if (error) throw error;
+};
+
 
 
 

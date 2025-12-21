@@ -49,6 +49,7 @@ CREATE TABLE bundles (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name text NOT NULL,
   description text,
+  price numeric NOT NULL,
   is_active boolean DEFAULT true,
   created_at timestamp without time zone DEFAULT now()
 );

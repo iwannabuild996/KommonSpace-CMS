@@ -22,6 +22,9 @@ ADD COLUMN IF NOT EXISTS ll_doc_url TEXT;
 ALTER TABLE subscriptions 
 ADD COLUMN IF NOT EXISTS drive_folder_url TEXT;
 
+ALTER TABLE bundles 
+ADD COLUMN IF NOT EXISTS price numeric NOT NULL DEFAULT 0;
+
 -- Add comments for documentation
 COMMENT ON COLUMN subscriptions.activities IS 'List of activity text entries that can be added and removed';
 COMMENT ON COLUMN subscriptions.br_pdf_url IS 'Board Resolution PDF URL';

@@ -11,6 +11,7 @@ import PlansPage from './pages/PlansPage';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage';
 import ServicesPage from './pages/ServicesPage';
+import BundlesPage from './pages/BundlesPage';
 import './styles/tailwind.css';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
 
                 <Route path="plans" element={<PlansPage />} />
                 <Route path="services" element={<ServicesPage />} />
+                <Route path="bundles" element={<BundlesPage />} />
 
                 <Route path="subscriptions" element={<SubscriptionsPage />} />
                 <Route path="subscriptions/:id" element={<SubscriptionDetailPage />} />
