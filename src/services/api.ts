@@ -38,6 +38,15 @@ export interface Plan {
     tag?: string;
 }
 
+export interface Service {
+    id: string;
+    code: string;
+    name: string;
+    price: number;
+    is_recurring: boolean;
+    created_at?: string;
+}
+
 export interface SubscriptionSignatory {
     id: string;
     subscription_id: string;
@@ -582,5 +591,50 @@ export const getPayments = async (subscriptionId?: string) => {
     if (error) throw error;
     return data as Payment[];
 };
+
+// --- Services ---
+
+export const getServices = async () => {
+    const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('name');
+
+    if (error) throw error;
+    return data as Service[];
+};
+
+export const createService = async (service: Partial<Service>) => {
+    const { data, error } = await supabase
+        .from('services')
+        .insert(service)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Service;
+};
+
+export const updateService = async (id: string, updates: Partial<Service>) => {
+    const { data, error } = await supabase
+        .from('services')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Service;
+};
+
+export const deleteService = async (id: string) => {
+    const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+};
+
 
 

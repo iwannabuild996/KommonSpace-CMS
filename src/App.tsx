@@ -10,6 +10,7 @@ import UserDetailPage from './pages/UserDetailPage';
 import PlansPage from './pages/PlansPage';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage';
+import ServicesPage from './pages/ServicesPage';
 import './styles/tailwind.css';
 
 function App() {
@@ -30,11 +31,13 @@ function App() {
                 <Route path="users/:id" element={<UserDetailPage />} />
 
                 <Route path="plans" element={<PlansPage />} />
+                <Route path="services" element={<ServicesPage />} />
 
                 <Route path="subscriptions" element={<SubscriptionsPage />} />
                 <Route path="subscriptions/:id" element={<SubscriptionDetailPage />} />
               </Route>
             </Route>
+
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
