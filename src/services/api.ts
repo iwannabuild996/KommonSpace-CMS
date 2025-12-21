@@ -47,6 +47,18 @@ export interface Service {
     created_at?: string;
 }
 
+export interface ServiceWorkflow {
+    id: string;
+    service_id: string;
+    status_code: string;
+    status_label: string;
+    step_order: number;
+    is_terminal: boolean;
+    is_failure: boolean;
+    is_active: boolean;
+    created_at?: string;
+}
+
 export interface SubscriptionSignatory {
     id: string;
     subscription_id: string;
@@ -635,6 +647,43 @@ export const deleteService = async (id: string) => {
 
     if (error) throw error;
 };
+
+// --- Service Workflows ---
+
+export const getServiceWorkflows = async (serviceId: string) => {
+    const { data, error } = await supabase
+        .from('service_workflows')
+        .select('*')
+        .eq('service_id', serviceId)
+        .order('step_order', { ascending: true });
+
+    if (error) throw error;
+    return data as ServiceWorkflow[];
+};
+
+export const createServiceWorkflow = async (workflow: Partial<ServiceWorkflow>) => {
+    const { data, error } = await supabase
+        .from('service_workflows')
+        .insert(workflow)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as ServiceWorkflow;
+};
+
+export const updateServiceWorkflow = async (id: string, updates: Partial<ServiceWorkflow>) => {
+    const { data, error } = await supabase
+        .from('service_workflows')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as ServiceWorkflow;
+};
+
 
 
 

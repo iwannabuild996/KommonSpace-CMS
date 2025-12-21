@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getServices, deleteService } from '../services/api';
 import type { Service } from '../services/api';
 import ServiceForm from '../components/ServiceForm';
+import ServiceWorkflowsModal from '../components/ServiceWorkflowsModal';
 import { useToast } from '../hooks/useToast';
 
 export default function ServicesPage() {
@@ -16,6 +17,10 @@ export default function ServicesPage() {
     // Delete Confirmation State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
+
+    // Workflow Modal State
+    const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
+    const [selectedServiceForWorkflow, setSelectedServiceForWorkflow] = useState<Service | null>(null);
 
     const fetchServices = async () => {
         setLoading(true);
@@ -42,6 +47,11 @@ export default function ServicesPage() {
     const handleEdit = (service: Service) => {
         setEditingService(service);
         setIsModalOpen(true);
+    };
+
+    const handleManageWorkflows = (service: Service) => {
+        setSelectedServiceForWorkflow(service);
+        setIsWorkflowModalOpen(true);
     };
 
     const confirmDelete = (service: Service) => {
@@ -125,6 +135,12 @@ export default function ServicesPage() {
                                                 </td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                                     <button
+                                                        onClick={() => handleManageWorkflows(service)}
+                                                        className="text-purple-600 hover:text-purple-900 mr-4"
+                                                    >
+                                                        Workflows
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleEdit(service)}
                                                         className="text-indigo-600 hover:text-indigo-900 mr-4"
                                                     >
@@ -152,6 +168,13 @@ export default function ServicesPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={fetchServices}
                 initialData={editingService}
+            />
+
+            <ServiceWorkflowsModal
+                isOpen={isWorkflowModalOpen}
+                onClose={() => setIsWorkflowModalOpen(false)}
+                serviceId={selectedServiceForWorkflow?.id || null}
+                serviceName={selectedServiceForWorkflow?.name || ''}
             />
 
             {/* Delete Confirmation Modal */}
