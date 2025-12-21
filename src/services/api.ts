@@ -72,8 +72,7 @@ export interface BundleItem {
     bundle_id: string;
     item_type: 'service' | 'plan';
     item_id: string;
-    quantity: number;
-    override_price?: number;
+    override_price?: number; // Maps to 'amount' in DB
     created_at?: string;
 
     // Joined fields (optional, depend on query)
@@ -768,19 +767,41 @@ export const getBundleItems = async (bundleId: string) => {
     return data?.map((item: any) => ({
         ...item,
         item_id: item.service_id || item.plan_id,
-        item_type: item.item_type === 'SERVICE' ? 'service' : 'plan'
+        item_type: item.item_type === 'SERVICE' ? 'service' : 'plan',
+        override_price: item.amount
     })) as BundleItem[];
 };
 
 export const addBundleItem = async (item: Partial<BundleItem>) => {
+    // Map frontend Item to DB Item
+    const dbItem: any = {
+        bundle_id: item.bundle_id,
+        amount: item.override_price || 0,
+        // Map item_type
+        item_type: item.item_type === 'service' ? 'SERVICE' : 'VO',
+    };
+
+    if (item.item_type === 'service') {
+        dbItem.service_id = item.item_id;
+    } else if (item.item_type === 'plan') {
+        dbItem.plan_id = item.item_id;
+    }
+
     const { data, error } = await supabase
         .from('bundle_items')
-        .insert(item)
+        .insert(dbItem)
         .select()
         .single();
 
     if (error) throw error;
-    return data as BundleItem;
+
+    // Map response back
+    return {
+        ...data,
+        item_id: data.service_id || data.plan_id,
+        item_type: data.item_type === 'SERVICE' ? 'service' : 'plan',
+        override_price: data.amount
+    } as BundleItem;
 };
 
 export const removeBundleItem = async (itemId: string) => {

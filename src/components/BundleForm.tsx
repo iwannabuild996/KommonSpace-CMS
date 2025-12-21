@@ -34,9 +34,9 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
     const [availableServices, setAvailableServices] = useState<Service[]>([]);
 
     // New Item State
-    const [newItemType, setNewItemType] = useState<'service'>('service'); // Can expand to 'plan' later
+    const [newItemType] = useState<'service'>('service');
     const [newItemId, setNewItemId] = useState('');
-    const [newItemQuantity, setNewItemQuantity] = useState(1);
+    const [overridePrice, setOverridePrice] = useState('');
 
     // Initial Load
     useEffect(() => {
@@ -130,12 +130,12 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                 bundle_id: initialData.id,
                 item_type: newItemType,
                 item_id: newItemId,
-                quantity: newItemQuantity,
+                override_price: overridePrice ? parseFloat(overridePrice) : 0,
             });
             addToast('Item added', 'success');
             fetchItems(initialData.id);
             setNewItemId('');
-            setNewItemQuantity(1);
+            setOverridePrice('');
         } catch (err: any) {
             console.error(err);
             addToast(err.message || 'Failed to add item', 'error');
@@ -243,22 +243,31 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                                         <select
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                             value={newItemId}
-                                            onChange={(e) => setNewItemId(e.target.value)}
+                                            onChange={(e) => {
+                                                setNewItemId(e.target.value);
+                                                // Auto-populate price
+                                                const service = availableServices.find(s => s.id === e.target.value);
+                                                if (service) {
+                                                    setOverridePrice(service.price.toString());
+                                                }
+                                            }}
                                         >
                                             <option value="">Select Service...</option>
                                             {availableServices.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                                                <option key={s.id} value={s.id}>{s.name} ({s.code}) - ₹{s.price}</option>
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="w-24">
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                                    <div className="w-32">
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Price in Bundle</label>
                                         <input
                                             type="number"
-                                            min="1"
+                                            min="0"
+                                            step="0.01"
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                            value={newItemQuantity}
-                                            onChange={(e) => setNewItemQuantity(parseInt(e.target.value))}
+                                            value={overridePrice}
+                                            onChange={(e) => setOverridePrice(e.target.value)}
+                                            placeholder="Auto"
                                         />
                                     </div>
                                     <button
@@ -277,7 +286,7 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th scope="col" className="py-2 pl-3 text-left text-xs font-medium text-gray-500">Item</th>
-                                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">Qty</th>
+                                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">Price</th>
                                                 <th scope="col" className="relative py-2 pl-3 pr-4 sm:pr-6">
                                                     <span className="sr-only">Remove</span>
                                                 </th>
@@ -293,7 +302,7 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                                                             {item.services?.name || 'Unknown Service'}
                                                         </td>
                                                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
-                                                            {item.quantity}
+                                                            ₹{item.override_price}
                                                         </td>
                                                         <td className="relative whitespace-nowrap py-3 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                                             <button
