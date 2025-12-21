@@ -151,6 +151,33 @@ export interface Subscription {
     users?: User;
     plans?: Plan;
     bundles?: Bundle;
+    subscription_items?: SubscriptionItem[];
+    subscription_services?: SubscriptionService[];
+}
+
+export interface SubscriptionItem {
+    id: string;
+    subscription_id: string;
+    item_type: 'service' | 'plan' | 'consumable';
+    description?: string;
+    amount: number;
+    revenue_nature: 'TURNOVER' | 'PASSTHROUGH';
+    service_id?: string;
+    plan_id?: string;
+    consumable_id?: string;
+    created_at?: string;
+}
+
+export interface SubscriptionService {
+    id: string;
+    subscription_id: string;
+    service_id: string;
+    current_workflow_id?: string;
+    status_updated_at?: string;
+    created_at?: string;
+    // Relations
+    service_workflows?: ServiceWorkflow;
+    services?: Service;
 }
 
 export interface SubscriptionLog {
@@ -264,7 +291,13 @@ export const getSubscriptions = async () => {
             users(name),
             plans(name),
             subscription_signatories(*),
-            subscription_companies(*)
+            subscription_companies(*),
+            subscription_items(*),
+            subscription_services(
+                *,
+                service_workflows(*),
+                services(name)
+            )
         `)
         .order('suite_number', { ascending: false });
 
@@ -281,7 +314,13 @@ export const getSubscription = async (id: string) => {
             users(name, phone),
             plans(name),
             subscription_signatories(*),
-            subscription_companies(*)
+            subscription_companies(*),
+            subscription_items(*),
+            subscription_services(
+                *,
+                service_workflows(*),
+                services(name)
+            )
         `)
         .eq('id', id)
         .single();

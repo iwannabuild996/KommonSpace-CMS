@@ -403,7 +403,7 @@ ${userPhone}`;
         const textToCopy = `500 Rupees Stamp Paper
 
 First Party
-Director - Muhammed Shajar C
+Director Muhammed Shajar C
 Loomian Developers Private Limited
 10/1744, 1st Floor, Sowbhagya building, Athani, Kakkanad, Kusumagiri P.O, Kochi, 682030
 
@@ -1568,6 +1568,80 @@ ${secondPartyDetails}`;
                                         </button>
                                     </div>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+
+
+
+                    {/* Subscription Items & Services */}
+                    <div className="overflow-hidden bg-white shadow sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+                            <h3 className="text-base font-semibold leading-6 text-gray-900">Subscription Items & Services</h3>
+                        </div>
+                        <div className="px-4 py-5 sm:p-6">
+                            {/* Items Table */}
+                            {subscription?.subscription_items && subscription.subscription_items.length > 0 ? (
+                                <div className="mb-6">
+                                    <h4 className="text-sm font-medium text-gray-900 mb-3">Items</h4>
+                                    <div className="overflow-x-auto ring-1 ring-gray-200 sm:rounded-lg">
+                                        <table className="min-w-full divide-y divide-gray-300">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" className="py-3 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Description</th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
+                                                    <th scope="col" className="px-3 py-3 text-right text-sm font-semibold text-gray-900 pr-6">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 bg-white">
+                                                {subscription.subscription_items.map((item: any) => (
+                                                    <tr key={item.id}>
+                                                        <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
+                                                            {item.description || item.item_type}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500 capitalize">{item.item_type}</td>
+                                                        <td className="whitespace-nowrap px-3 py-3 text-right text-sm text-gray-500 pr-6">₹{item.amount}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {/* Active Services Status */}
+                            {subscription?.subscription_services && subscription.subscription_services.length > 0 ? (
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-900 mb-3">Active Services</h4>
+                                    <div className="overflow-x-auto ring-1 ring-gray-200 sm:rounded-lg">
+                                        <table className="min-w-full divide-y divide-gray-300">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" className="py-3 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Service</th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 bg-white">
+                                                {subscription.subscription_services.map((service: any) => (
+                                                    <tr key={service.id}>
+                                                        <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
+                                                            {service.services?.name || 'Unknown'}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
+                                                            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                                                {service.service_workflows?.status_label || 'Active'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {(!subscription?.subscription_items?.length && !subscription?.subscription_services?.length) && (
+                                <p className="text-sm text-gray-500">No items or services found.</p>
                             )}
                         </div>
                     </div>
