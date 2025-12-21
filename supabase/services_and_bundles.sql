@@ -119,6 +119,8 @@ CREATE TABLE subscription_items (
   -- Services
   service_id uuid REFERENCES services(id),
 
+  consumable_id uuid REFERENCES consumables(id),
+
   description text,
   amount numeric NOT NULL,
 
