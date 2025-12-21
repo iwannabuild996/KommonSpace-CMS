@@ -1,5 +1,15 @@
-ALTER TABLE subscription 
+ALTER TABLE subscriptions 
 ADD COLUMN IF NOT EXISTS renewal_amount numeric DEFAULT 0;
+
+-- Create consumables table
+CREATE TABLE consumables (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  price numeric NOT NULL DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now()
+);
+
+-- Enable RLS
 
 CREATE TABLE services (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -60,23 +70,6 @@ CREATE TYPE bundle_item_type AS ENUM (
   'CONSUMABLE'
 );
 
-CREATE TABLE consumables (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  name text NOT NULL,
-  price numeric NOT NULL DEFAULT 0,
-  created_at timestamp without time zone DEFAULT now()
-);
-
--- Enable RLS for consumables
-ALTER TABLE consumables ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow admin access" ON consumables
-FOR ALL TO authenticated
-USING (is_admin());
-
-CREATE POLICY "Allow staff access" ON consumables
-FOR ALL TO authenticated
-USING (is_staff());
 
 CREATE TABLE bundle_items (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -143,6 +136,7 @@ ALTER TABLE subscription_service_status_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bundles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bundle_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consumables ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "Allow admin access" ON subscription_items
@@ -200,18 +194,6 @@ USING (is_admin());
 CREATE POLICY "Allow staff access" ON bundle_items
 FOR ALL TO authenticated
 USING (is_staff());
-
-
--- Create consumables table
-CREATE TABLE consumables (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  name text NOT NULL,
-  price numeric NOT NULL DEFAULT 0,
-  created_at timestamp without time zone DEFAULT now()
-);
-
--- Enable RLS
-ALTER TABLE consumables ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow admin access" ON consumables
 FOR ALL TO authenticated

@@ -53,6 +53,8 @@ export interface ServiceWorkflow {
     status_code: string;
     status_label: string;
     step_order: number;
+    is_terminal: boolean;
+    is_failure: boolean;
     is_active: boolean;
     created_at?: string;
 }

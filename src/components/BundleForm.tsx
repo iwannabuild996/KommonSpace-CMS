@@ -105,17 +105,19 @@ const BundleForm: React.FC<BundleFormProps> = ({ isOpen, onClose, onSuccess, ini
                 price: priceNum,
             };
 
-            let bundleId = initialData?.id;
-
             if (initialData) {
                 await updateBundle(initialData.id, payload);
                 addToast('Bundle updated successfully', 'success');
             } else {
                 const newBundle = await createBundle(payload);
-                bundleId = newBundle.id;
+                await Promise.all(items.map(async (item) => {
+                    await addBundleItem({
+                        ...item,
+                        bundle_id: newBundle.id
+                    });
+                }));
                 addToast('Bundle created successfully', 'success');
             }
-
             onSuccess();
             onClose();
         } catch (err: any) {
