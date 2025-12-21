@@ -166,6 +166,10 @@ export interface SubscriptionItem {
     plan_id?: string;
     consumable_id?: string;
     created_at?: string;
+    // Relations
+    plans?: Plan;
+    services?: Service;
+    consumables?: { name: string };
 }
 
 export interface SubscriptionService {
@@ -292,7 +296,12 @@ export const getSubscriptions = async () => {
             plans(name),
             subscription_signatories(*),
             subscription_companies(*),
-            subscription_items(*),
+            subscription_items(
+                *,
+                plans(name),
+                services(name),
+                consumables(name)
+            ),
             subscription_services(
                 *,
                 service_workflows(*),
@@ -315,7 +324,12 @@ export const getSubscription = async (id: string) => {
             plans(name),
             subscription_signatories(*),
             subscription_companies(*),
-            subscription_items(*),
+            subscription_items(
+                *,
+                plans(name),
+                services(name),
+                consumables(name)
+            ),
             subscription_services(
                 *,
                 service_workflows(*),
@@ -898,6 +912,19 @@ export const removeBundleItem = async (itemId: string) => {
         .eq('id', itemId);
 
     if (error) throw error;
+};
+
+// 5.5 Update Subscription Item
+export const updateSubscriptionItem = async (id: string, payload: Partial<SubscriptionItem>) => {
+    const { data, error } = await supabase
+        .from('subscription_items')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as SubscriptionItem;
 };
 
 

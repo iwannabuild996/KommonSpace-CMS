@@ -9,6 +9,8 @@ import AddPaymentModal from '../components/AddPaymentModal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logo from '../assets/logo.png';
+import EditSubscriptionItemModal from '../components/EditSubscriptionItemModal';
+import type { SubscriptionItem } from '../services/api';
 
 interface Log {
     id: string;
@@ -60,6 +62,10 @@ export default function SubscriptionDetailPage() {
     // Payments State
     const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+
+    // Subscription Item Edit State
+    const [editingItem, setEditingItem] = useState<SubscriptionItem | null>(null);
+    const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
 
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -1591,16 +1597,30 @@ ${secondPartyDetails}`;
                                                     <th scope="col" className="py-3 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Description</th>
                                                     <th scope="col" className="px-3 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
                                                     <th scope="col" className="px-3 py-3 text-right text-sm font-semibold text-gray-900 pr-6">Amount</th>
+                                                    <th scope="col" className="relative py-3 pl-3 pr-4 sm:pr-6">
+                                                        <span className="sr-only">Edit</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200 bg-white">
                                                 {subscription.subscription_items.map((item: any) => (
                                                     <tr key={item.id}>
                                                         <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
-                                                            {item.description || item.item_type}
+                                                            {item.description || item.plans?.name || item.services?.name || item.consumables?.name || item.item_type}
                                                         </td>
                                                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500 capitalize">{item.item_type}</td>
                                                         <td className="whitespace-nowrap px-3 py-3 text-right text-sm text-gray-500 pr-6">₹{item.amount}</td>
+                                                        <td className="relative whitespace-nowrap py-3 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingItem(item);
+                                                                    setIsEditItemModalOpen(true);
+                                                                }}
+                                                                className="text-indigo-600 hover:text-indigo-900"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -2071,6 +2091,20 @@ ${address}`;
                     setEditingPayment(null);
                 }}
                 initialData={editingPayment}
+            />
+
+            {/* Edit Subscription Item Modal */}
+            <EditSubscriptionItemModal
+                isOpen={isEditItemModalOpen}
+                onClose={() => {
+                    setIsEditItemModalOpen(false);
+                    setEditingItem(null);
+                }}
+                item={editingItem}
+                onUpdate={() => {
+                    fetchData();
+                    addToast('Item updated successfully', 'success');
+                }}
             />
         </div >
     );
