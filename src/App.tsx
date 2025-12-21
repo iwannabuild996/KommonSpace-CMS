@@ -12,6 +12,8 @@ import SubscriptionsPage from './pages/SubscriptionsPage';
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage';
 import ServicesPage from './pages/ServicesPage';
 import BundlesPage from './pages/BundlesPage';
+import InvoicesPage from './pages/InvoicesPage';
+import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import './styles/tailwind.css';
 
 function App() {
@@ -37,6 +39,8 @@ function App() {
 
                 <Route path="subscriptions" element={<SubscriptionsPage />} />
                 <Route path="subscriptions/:id" element={<SubscriptionDetailPage />} />
+                <Route path="subscriptions/:id/invoices" element={<InvoicesPage />} />
+                <Route path="subscriptions/:id/invoices/:invoiceId" element={<InvoiceDetailPage />} />
               </Route>
             </Route>
 

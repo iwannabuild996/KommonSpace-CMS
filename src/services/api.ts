@@ -917,6 +917,7 @@ export const removeBundleItem = async (itemId: string) => {
 };
 
 // 5.5 Update Subscription Item
+// 5.5 Update Subscription Item
 export const updateSubscriptionItem = async (id: string, payload: Partial<SubscriptionItem>) => {
     const { data, error } = await supabase
         .from('subscription_items')
@@ -927,6 +928,130 @@ export const updateSubscriptionItem = async (id: string, payload: Partial<Subscr
 
     if (error) throw error;
     return data as SubscriptionItem;
+};
+
+
+// --- Invoice System ---
+
+export type InvoiceType = 'TAX_INVOICE' | 'PROFORMA' | 'CREDIT_NOTE' | 'DEBIT_NOTE';
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'CANCELLED';
+
+export interface Invoice {
+    id: string;
+    subscription_id: string;
+    user_id: string;
+    invoice_number?: string;
+    invoice_type: InvoiceType;
+    status: InvoiceStatus;
+    invoice_date: string;
+    due_date?: string;
+    subtotal: number;
+    tax_amount: number;
+    total_amount: number;
+    created_at?: string;
+    // Relations
+    invoice_items?: InvoiceItem[];
+}
+
+export interface InvoiceItem {
+    id: string;
+    invoice_id: string;
+    subscription_item_id?: string;
+    description: string;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+    revenue_nature: 'TURNOVER' | 'PASSTHROUGH';
+    gst_rate: number;
+    gst_amount: number;
+    created_at?: string;
+}
+
+// 1. Get Invoices for Subscription
+export const getInvoices = async (subscriptionId: string) => {
+    const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('subscription_id', subscriptionId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as Invoice[];
+};
+
+// 2. Get Single Invoice
+export const getInvoice = async (id: string) => {
+    const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+            *,
+            invoice_items(*)
+        `)
+        .eq('id', id)
+        .single();
+
+    if (error) throw error;
+    return data as Invoice;
+};
+
+// 3. Create Invoice
+export const createInvoice = async (payload: Partial<Invoice>) => {
+    const { data, error } = await supabase
+        .from('invoices')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Invoice;
+};
+
+// 4. Update Invoice
+export const updateInvoice = async (id: string, payload: Partial<Invoice>) => {
+    const { data, error } = await supabase
+        .from('invoices')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as Invoice;
+};
+
+// 5. Create Invoice Item
+export const createInvoiceItem = async (payload: Partial<InvoiceItem>) => {
+    const { data, error } = await supabase
+        .from('invoice_items')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as InvoiceItem;
+};
+
+// 6. Update Invoice Item
+export const updateInvoiceItem = async (id: string, payload: Partial<InvoiceItem>) => {
+    const { data, error } = await supabase
+        .from('invoice_items')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as InvoiceItem;
+};
+
+// 7. Delete Invoice Item
+export const deleteInvoiceItem = async (id: string) => {
+    const { error } = await supabase
+        .from('invoice_items')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
 };
 
 

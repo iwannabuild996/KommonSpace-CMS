@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers, getPayments, getAdminUsers } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers, getPayments, getAdminUsers, getInvoices, createInvoice, createInvoiceItem } from '../services/api';
 import type { SubscriptionStatus, RubberStampStatus, NameBoardStatus, SubscriptionFile, SubscriptionFileLabel, Payment } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
@@ -65,6 +66,52 @@ export default function SubscriptionDetailPage() {
 
     // Subscription Item Edit State
     const [editingItem, setEditingItem] = useState<SubscriptionItem | null>(null);
+
+    const handleViewInvoices = async () => {
+        if (!id || !subscription) return;
+        try {
+            const invoices = await getInvoices(id);
+            if (invoices && invoices.length > 0) {
+                // Navigate to existing invoice
+                navigate(`/subscriptions/${id}/invoices/${invoices[0].id}`);
+            } else {
+                // Create Draft Invoice and Populate Items
+                const newInvoice = await createInvoice({
+                    subscription_id: id,
+                    user_id: subscription.user_id,
+                    invoice_type: 'TAX_INVOICE',
+                    status: 'DRAFT',
+                    invoice_date: new Date().toISOString().split('T')[0],
+                    subtotal: 0,
+                    tax_amount: 0,
+                    total_amount: 0
+                });
+
+                // Populate Items
+                if (subscription.subscription_items && subscription.subscription_items.length > 0) {
+                    await Promise.all(subscription.subscription_items.map(async (item: any) => {
+                        await createInvoiceItem({
+                            invoice_id: newInvoice.id,
+                            subscription_item_id: item.id,
+                            description: item.description || item.plans?.name || item.services?.name || item.consumables?.name || item.item_type,
+                            quantity: 1,
+                            unit_price: item.amount,
+                            amount: item.amount,
+                            revenue_nature: item.revenue_nature || 'TURNOVER',
+                            gst_rate: 0,
+                            gst_amount: 0
+                        });
+                    }));
+                }
+
+                addToast('Draft invoice created from subscription items', 'success');
+                navigate(`/subscriptions/${id}/invoices/${newInvoice.id}`);
+            }
+        } catch (err: any) {
+            console.error(err);
+            addToast('Failed to handle invoice request', 'error');
+        }
+    };
     const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
 
     // Confirmation Modal State
@@ -1730,6 +1777,15 @@ ${secondPartyDetails}`;
                                     ))}
                                 </div>
                             )}
+                        </div>
+                        <div className="bg-gray-50 px-4 py-4 sm:px-6 border-t border-gray-200 rounded-b-lg">
+                            <button
+                                onClick={handleViewInvoices}
+                                className="text-sm font-semibold leading-6 text-indigo-600 hover:text-indigo-500 flex items-center gap-1"
+                            >
+                                <DocumentTextIcon className="h-4 w-4" />
+                                Check / Create Invoice
+                            </button>
                         </div>
                     </div>
 
