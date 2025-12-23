@@ -289,6 +289,12 @@ export default function InvoiceDetailPage() {
             doc.setTextColor(79, 70, 229); // Indigo
             doc.text(`INR ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
 
+            finalY += 8;
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text('Paid Amount:', labelColX, finalY);
+            doc.text(`INR ${(subscription?.received_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
+
             // -- Pricing Note --
             doc.setFontSize(8);
             doc.setTextColor(100);
