@@ -5,7 +5,7 @@ import { getInvoice, createInvoiceItem, deleteInvoiceItem, getSubscription, upda
 import type { Invoice, Subscription, InvoiceStatus } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { ChevronLeftIcon, TrashIcon, PlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-// import { format } from 'date-fns';
+import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logo from '../assets/logo.png';
@@ -151,23 +151,24 @@ export default function InvoiceDetailPage() {
 
             // -- Header Right --
             doc.setFontSize(24);
-            doc.setTextColor(79, 70, 229); // Indigo
+            doc.setTextColor(0); // Indigo
             doc.text('INVOICE', pageWidth - 14, 22, { align: 'right' });
 
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(`# ${invoice.invoice_number || 'DRAFT'}`, pageWidth - 14, 30, { align: 'right' });
-            doc.text(`Status: ${invoice.status}`, pageWidth - 14, 35, { align: 'right' });
+
 
             // -- Company Info (Left under logo) --
             doc.setFontSize(10);
             doc.setTextColor(0);
-            doc.text('Kommon Space', 14, 35);
+            doc.text('Loomian Developers Pvt Ltd', 14, 35);
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.text('123 Business Park, Calicut', 14, 40);
-            doc.text('Kerala, India', 14, 44);
-            doc.text('support@kommonspace.com', 14, 48);
+            doc.text('10/1744, 1st Floor, Sowbhagya building, Athani', 14, 40);
+            doc.text('Kakkanad, Kochi, 682030, Kerala, India', 14, 44);
+            doc.text('kommonspace@gmail.com', 14, 48);
+            doc.text('www.kommonspace.com', 14, 52);
 
             // -- Divider --
             doc.setDrawColor(200);
@@ -190,7 +191,7 @@ export default function InvoiceDetailPage() {
             // Invoice Details (Right)
             doc.setTextColor(0);
             doc.text('Date:', pageWidth - 60, startY);
-            doc.text(invoice.invoice_date || new Date().toLocaleDateString(), pageWidth - 14, startY, { align: 'right' });
+            doc.text(format(new Date(invoice.invoice_date || new Date()), 'dd-MM-yyyy'), pageWidth - 14, startY, { align: 'right' });
 
             doc.text('Due Date:', pageWidth - 60, startY + 6);
             doc.text(invoice.due_date || '-', pageWidth - 14, startY + 6, { align: 'right' });
@@ -198,15 +199,14 @@ export default function InvoiceDetailPage() {
             // -- Table --
             const tableBody = invoice.invoice_items?.map(item => [
                 item.description,
-                item.gst_rate > 0 ? `${item.gst_rate}%` : '-',
                 item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-                (item.gst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-                (item.amount + (item.gst_amount || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })
+                '1',
+                item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
             ]) || [];
 
             autoTable(doc, {
                 startY: startY + 20,
-                head: [['Description', 'GST %', 'Amount', 'Tax', 'Total']],
+                head: [['Description', 'Rate', 'Qty', 'Total']],
                 body: tableBody,
                 theme: 'grid',
                 headStyles: {
@@ -218,8 +218,7 @@ export default function InvoiceDetailPage() {
                     0: { cellWidth: 'auto' }, // Description
                     1: { halign: 'right' },
                     2: { halign: 'right' },
-                    3: { halign: 'right' },
-                    4: { halign: 'right', fontStyle: 'bold' }
+                    3: { halign: 'right', fontStyle: 'bold' }
                 },
                 footStyles: {
                     fillColor: [245, 245, 245],
@@ -242,11 +241,11 @@ export default function InvoiceDetailPage() {
             doc.setTextColor(100);
 
             doc.text('Subtotal:', labelColX, finalY);
-            doc.text(`₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
+            doc.text(`INR ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
 
-            finalY += 6;
-            doc.text('Tax (GST):', labelColX, finalY);
-            doc.text(`₹${tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
+            // finalY += 6;
+            // doc.text('Tax (GST):', labelColX, finalY);
+            // doc.text(`INR ${tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
 
             finalY += 6;
             doc.setDrawColor(200);
@@ -257,7 +256,7 @@ export default function InvoiceDetailPage() {
             doc.setTextColor(0); // Black
             doc.text('Total:', labelColX, finalY);
             doc.setTextColor(79, 70, 229); // Indigo
-            doc.text(`₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
+            doc.text(`INR ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
 
             // -- Footer --
             const footerY = doc.internal.pageSize.height - 20;
@@ -265,7 +264,7 @@ export default function InvoiceDetailPage() {
             doc.setTextColor(150);
             doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
             doc.setFontSize(8);
-            doc.text('Kommon Space - Co-Working & Office Solutions', pageWidth / 2, footerY + 5, { align: 'center' });
+            doc.text('KommonSpace - Virtual Office and Managed Office Solutions', pageWidth / 2, footerY + 5, { align: 'center' });
 
             // -- Save --
             doc.save(`Invoice_${invoice.invoice_number || 'draft'}.pdf`);
