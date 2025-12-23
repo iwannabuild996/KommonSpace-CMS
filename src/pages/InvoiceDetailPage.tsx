@@ -223,7 +223,12 @@ export default function InvoiceDetailPage() {
 
             autoTable(doc, {
                 startY: tableStartY,
-                head: [['Description', 'Rate', 'Qty', 'Total']],
+                head: [[
+                    'Description',
+                    { content: 'Rate', styles: { halign: 'right' } },
+                    { content: 'Qty', styles: { halign: 'right' } },
+                    { content: 'Total', styles: { halign: 'right' } }
+                ]],
                 body: tableBody,
                 theme: 'grid',
                 headStyles: {
