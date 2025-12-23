@@ -147,7 +147,7 @@ export default function InvoiceDetailPage() {
             // -- Logo --
             const logoData = await getImageData(logo);
             // Image is logo.png. I'll use fixed size.
-            doc.addImage(logoData, 'PNG', 14, 10, 50, 15);
+            doc.addImage(logoData, 'PNG', 14, 10, 50, 18);
 
             // -- Header Right --
             doc.setFontSize(24);
@@ -162,7 +162,7 @@ export default function InvoiceDetailPage() {
             // -- Company Info (Left under logo) --
             doc.setFontSize(10);
             doc.setTextColor(0);
-            doc.text('Loomian Developers Pvt Ltd', 14, 35);
+            doc.text('Loomian Developers Private Limited', 14, 35);
             doc.setFontSize(9);
             doc.setTextColor(100);
             doc.text('10/1744, 1st Floor, Sowbhagya building, Athani', 14, 40);
@@ -183,9 +183,24 @@ export default function InvoiceDetailPage() {
             doc.text('Bill To:', 14, startY);
             doc.setFontSize(10);
             doc.text(subscription?.users?.name || 'Client Name', 14, startY + 6);
+
+            let billToY = startY + 11;
+
             if (subscription?.suite_number) {
                 doc.setTextColor(100);
-                doc.text(`Suite ${subscription.suite_number}`, 14, startY + 11);
+                doc.text(`Suite ${subscription.suite_number}`, 14, billToY);
+                billToY += 5;
+            }
+
+            const userAddress = subscription?.signatory_type === 'company'
+                ? subscription?.subscription_companies?.address
+                : subscription?.subscription_signatories?.address;
+
+            if (userAddress) {
+                doc.setTextColor(100);
+                const splitAddress = doc.splitTextToSize(userAddress, 80);
+                doc.text(splitAddress, 14, billToY);
+                billToY += (splitAddress.length * 5);
             }
 
             // Invoice Details (Right)
@@ -204,8 +219,10 @@ export default function InvoiceDetailPage() {
                 item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
             ]) || [];
 
+            const tableStartY = Math.max(billToY + 5, startY + 20);
+
             autoTable(doc, {
-                startY: startY + 20,
+                startY: tableStartY,
                 head: [['Description', 'Rate', 'Qty', 'Total']],
                 body: tableBody,
                 theme: 'grid',
