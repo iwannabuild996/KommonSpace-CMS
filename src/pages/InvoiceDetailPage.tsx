@@ -214,7 +214,11 @@ export default function InvoiceDetailPage() {
             // -- Table --
             const tableBody = invoice.invoice_items?.map(item => {
                 const isVO = (item.subscription_items as any)?.item_type === 'VO' || item.subscription_items?.services?.code === 'VO';
-                const description = isVO ? `Virtual Office ${item.description}` : item.description;
+                let description = isVO ? `Virtual Office ${item.description}` : item.description;
+
+                if (item.revenue_nature === 'PASSTHROUGH') {
+                    description += ' (Reimbursement at actuals)';
+                }
 
                 return [
                     description,
@@ -284,6 +288,19 @@ export default function InvoiceDetailPage() {
             doc.text('Total:', labelColX, finalY);
             doc.setTextColor(79, 70, 229); // Indigo
             doc.text(`INR ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightColX, finalY, { align: 'right' });
+
+            // -- Pricing Note --
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            const note = "The standard Virtual Office plan is priced at INR 9000 per year, and the Professional Virtual Office plan is priced at INR 11000 per year. Any discount offered on the Virtual Office service is applicable only for the first year. From the second year onwards, the subscription will be renewed at the prevailing standard rate of the selected plan.";
+
+            // Calculate Y position for the note (above footer)
+            // Footer is at height - 20, let's place this above it
+            const splitNote = doc.splitTextToSize(note, pageWidth - 28);
+            const noteHeight = splitNote.length * 4; // approx height
+            const noteY = doc.internal.pageSize.height - 25 - noteHeight;
+
+            doc.text(splitNote, 14, noteY);
 
             // -- Footer --
             const footerY = doc.internal.pageSize.height - 20;
