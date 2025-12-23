@@ -950,6 +950,7 @@ export interface Invoice {
     total_amount: number;
     created_at?: string;
     // Relations
+    // Relations
     invoice_items?: InvoiceItem[];
 }
 
@@ -965,6 +966,8 @@ export interface InvoiceItem {
     gst_rate: number;
     gst_amount: number;
     created_at?: string;
+    // Relations
+    subscription_items?: SubscriptionItem;
 }
 
 // 1. Get Invoices for Subscription
@@ -985,7 +988,13 @@ export const getInvoice = async (id: string) => {
         .from('invoices')
         .select(`
             *,
-            invoice_items(*)
+            invoice_items(
+                *,
+                subscription_items(
+                    *,
+                    services(code)
+                )
+            )
         `)
         .eq('id', id)
         .single();

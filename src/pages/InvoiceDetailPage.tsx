@@ -212,12 +212,17 @@ export default function InvoiceDetailPage() {
             doc.text(invoice.due_date || '-', pageWidth - 14, startY + 6, { align: 'right' });
 
             // -- Table --
-            const tableBody = invoice.invoice_items?.map(item => [
-                item.description,
-                item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-                '1',
-                item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
-            ]) || [];
+            const tableBody = invoice.invoice_items?.map(item => {
+                const isVO = (item.subscription_items as any)?.item_type === 'VO' || item.subscription_items?.services?.code === 'VO';
+                const description = isVO ? `Virtual Office ${item.description}` : item.description;
+
+                return [
+                    description,
+                    item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+                    '1',
+                    item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
+                ];
+            }) || [];
 
             const tableStartY = Math.max(billToY + 5, startY + 20);
 
