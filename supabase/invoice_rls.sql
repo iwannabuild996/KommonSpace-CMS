@@ -4,23 +4,29 @@ ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_sequences ENABLE ROW LEVEL SECURITY;
 
--- Policies for Invoices
-CREATE POLICY "Enable all access for authenticated users on invoices"
-ON invoices FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Allow admin access" ON invoices
+FOR ALL TO authenticated
+USING (is_admin());
 
--- Policies for Invoice Items
-CREATE POLICY "Enable all access for authenticated users on invoice_items"
-ON invoice_items FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Allow admin access" ON invoice_items
+FOR ALL TO authenticated
+USING (is_admin());
 
--- Policies for Invoice Sequences
-CREATE POLICY "Enable all access for authenticated users on invoice_sequences"
-ON invoice_sequences FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Allow admin access" ON invoice_sequences
+FOR ALL TO authenticated
+USING (is_admin());
+
+
+CREATE POLICY "Allow staff access" ON invoices
+FOR ALL TO authenticated
+USING (is_staff());
+
+CREATE POLICY "Allow staff access" ON invoice_items
+FOR ALL TO authenticated
+USING (is_staff());
+
+CREATE POLICY "Allow staff access" ON invoice_sequences
+FOR ALL TO authenticated
+USING (is_staff());
+
+

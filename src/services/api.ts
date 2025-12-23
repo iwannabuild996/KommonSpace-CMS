@@ -1063,6 +1063,23 @@ export const deleteInvoiceItem = async (id: string) => {
     if (error) throw error;
 };
 
+// 8. Preview Next Invoice Number
+export const previewNextInvoiceNumber = async (dateStr: string) => {
+    const { data, error } = await supabase
+        .rpc('preview_next_invoice_number', { p_date: dateStr });
+
+    if (error) throw error;
+    return data as string;
+};
+
+// 9. Update Invoice Sequence
+export const updateInvoiceSequence = async (dateStr: string, number: string) => {
+    const { error } = await supabase
+        .rpc('update_last_invoice_number', { p_date: dateStr, p_number: number });
+
+    if (error) throw error;
+};
+
 
 
 

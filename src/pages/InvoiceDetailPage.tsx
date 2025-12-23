@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getInvoice, createInvoiceItem, deleteInvoiceItem, getSubscription, updateInvoice } from '../services/api';
+import { getInvoice, createInvoiceItem, deleteInvoiceItem, getSubscription, updateInvoice, previewNextInvoiceNumber, updateInvoiceSequence } from '../services/api';
 import type { Invoice, Subscription, InvoiceStatus } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { ChevronLeftIcon, TrashIcon, PlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
@@ -41,6 +41,26 @@ export default function InvoiceDetailPage() {
         }
     }, [invoice]);
 
+    // Preview Next Invoice Number logic
+    useEffect(() => {
+        const fetchPreview = async () => {
+            // Only fetch if draft, no number in DB, and no number typed in state (or standard check)
+            // Actually, if we just loaded, invoiceNumber matches invoice.invoice_number.
+            // If it's empty, we want to prefill.
+            if (invoice && invoice.status === 'DRAFT' && !invoiceNumber && invoiceDate) {
+                try {
+                    const preview = await previewNextInvoiceNumber(invoiceDate);
+                    // Only set if we still don't have one (concurrency check purely for react state)
+                    setInvoiceNumber(prev => prev || preview);
+                    setIsDirty(true);
+                } catch (err) {
+                    console.error('Failed to preview invoice number', err);
+                }
+            }
+        };
+        fetchPreview();
+    }, [invoice, invoiceDate]); // re-run when date changes (FY change)
+
     const handleSave = async () => {
         if (!invoiceId || !invoice) return;
         try {
@@ -50,6 +70,11 @@ export default function InvoiceDetailPage() {
                 invoice_date: invoiceDate || undefined,
                 due_date: dueDate || undefined
             });
+
+            // Update Sequence
+            if (invoiceNumber && invoiceDate) {
+                await updateInvoiceSequence(invoiceDate, invoiceNumber);
+            }
             await loadData();
             setIsDirty(false);
             addToast('Invoice saved successfully', 'success');
