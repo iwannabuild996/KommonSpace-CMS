@@ -179,7 +179,19 @@ export default function SubscriptionsPage() {
                                                     {sub.users?.name || 'Unknown User'}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    {sub.subscription_companies?.name || '-'}
+                                                    <div>{sub.subscription_companies?.name || '-'}</div>
+                                                    <div className="flex gap-1 mt-1">
+                                                        {sub.name_board === 'Available' && (
+                                                            <span className="inline-flex items-center rounded-md bg-blue-700 px-2 py-1 text-xs font-medium text-white ring-1 ring-inset ring-blue-700/10">
+                                                                Board
+                                                            </span>
+                                                        )}
+                                                        {sub.rubber_stamp === 'Available' && (
+                                                            <span className="inline-flex items-center rounded-md bg-green-700 px-2 py-1 text-xs font-medium text-white ring-1 ring-inset ring-green-600/20">
+                                                                Seal
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     {sub.plans?.name || 'Unknown Plan'}
