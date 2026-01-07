@@ -148,6 +148,7 @@ export default function SubscriptionsPage() {
                                     <tr>
                                         <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Suite</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">User</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Company</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Plan</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Start</th>
@@ -176,6 +177,9 @@ export default function SubscriptionsPage() {
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     {sub.users?.name || 'Unknown User'}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                    {sub.subscription_companies?.name || '-'}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                     {sub.plans?.name || 'Unknown Plan'}

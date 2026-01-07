@@ -930,6 +930,47 @@ export const updateSubscriptionItem = async (id: string, payload: Partial<Subscr
     return data as SubscriptionItem;
 };
 
+export const createSubscriptionItem = async (payload: Partial<SubscriptionItem>) => {
+    const { data, error } = await supabase
+        .from('subscription_items')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as SubscriptionItem;
+};
+
+export const deleteSubscriptionItem = async (id: string) => {
+    const { error } = await supabase
+        .from('subscription_items')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+};
+
+// 5.6 Subscription Services
+export const createSubscriptionService = async (payload: Partial<SubscriptionService>) => {
+    const { data, error } = await supabase
+        .from('subscription_services')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as SubscriptionService;
+};
+
+export const deleteSubscriptionService = async (id: string) => {
+    const { error } = await supabase
+        .from('subscription_services')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+};
+
 
 // --- Invoice System ---
 

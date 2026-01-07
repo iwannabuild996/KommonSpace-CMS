@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers, getPayments, getAdminUsers, getInvoices, createInvoice, createInvoiceItem } from '../services/api';
+import { getSubscription, updateSubscription, getSubscriptionLogs, uploadSubscriptionFile, getSubscriptionFiles, extractSubscriptionData, updateSubscriptionFile, updateSubscriptionSignatory, updateSubscriptionCompany, getPlans, getUsers, getPayments, getAdminUsers, getInvoices, createInvoice, createInvoiceItem, deleteSubscriptionItem, deleteSubscriptionService } from '../services/api';
 import type { SubscriptionStatus, RubberStampStatus, NameBoardStatus, SubscriptionFile, SubscriptionFileLabel, Payment } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { supabase } from '../services/supabase';
@@ -11,6 +11,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logo from '../assets/logo.png';
 import EditSubscriptionItemModal from '../components/EditSubscriptionItemModal';
+import AddSubscriptionItemModal from '../components/AddSubscriptionItemModal';
+import AddSubscriptionServiceModal from '../components/AddSubscriptionServiceModal';
 import type { SubscriptionItem } from '../services/api';
 
 interface Log {
@@ -113,6 +115,8 @@ export default function SubscriptionDetailPage() {
         }
     };
     const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
+    const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+    const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
 
     // Confirmation Modal State
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -156,14 +160,43 @@ export default function SubscriptionDetailPage() {
                 setRubberStamp(subData.rubber_stamp || 'Not Available');
                 setNameBoard(subData.name_board || 'Not Available');
             }
-        } catch (err: any) {
-            console.error(err);
-            addToast('Failed to load subscription details', 'error');
+        } catch (error) {
+            console.error('Error fetching subscription data', error);
+            addToast('Failed to load subscription data', 'error');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleDeleteItem = async (itemId: string) => {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+        setUpdating(true);
+        try {
+            await deleteSubscriptionItem(itemId);
+            addToast('Item deleted successfully', 'success');
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            addToast(error.message || 'Failed to delete item', 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleDeleteService = async (serviceId: string) => {
+        if (!confirm('Are you sure you want to delete this service?')) return;
+        setUpdating(true);
+        try {
+            await deleteSubscriptionService(serviceId);
+            addToast('Service deleted successfully', 'success');
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            addToast(error.message || 'Failed to delete service', 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
     useEffect(() => {
         fetchData();
     }, [id]);
@@ -1636,7 +1669,15 @@ ${secondPartyDetails}`;
                             {/* Items Table */}
                             {subscription?.subscription_items && subscription.subscription_items.length > 0 ? (
                                 <div className="mb-6">
-                                    <h4 className="text-sm font-medium text-gray-900 mb-3">Items</h4>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="text-sm font-medium text-gray-900">Items</h4>
+                                        <button
+                                            onClick={() => setIsAddItemModalOpen(true)}
+                                            className="rounded bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-600 shadow-sm hover:bg-indigo-100"
+                                        >
+                                            Add Item
+                                        </button>
+                                    </div>
                                     <div className="overflow-x-auto ring-1 ring-gray-200 sm:rounded-lg">
                                         <table className="min-w-full divide-y divide-gray-300">
                                             <thead className="bg-gray-50">
@@ -1658,15 +1699,23 @@ ${secondPartyDetails}`;
                                                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500 capitalize">{item.item_type}</td>
                                                         <td className="whitespace-nowrap px-3 py-3 text-right text-sm text-gray-500 pr-6">₹{item.amount}</td>
                                                         <td className="relative whitespace-nowrap py-3 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingItem(item);
-                                                                    setIsEditItemModalOpen(true);
-                                                                }}
-                                                                className="text-indigo-600 hover:text-indigo-900"
-                                                            >
-                                                                Edit
-                                                            </button>
+                                                            <div className="flex justify-end gap-3">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingItem(item);
+                                                                        setIsEditItemModalOpen(true);
+                                                                    }}
+                                                                    className="text-indigo-600 hover:text-indigo-900"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteItem(item.id)}
+                                                                    className="text-red-600 hover:text-red-900"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1679,13 +1728,24 @@ ${secondPartyDetails}`;
                             {/* Active Services Status */}
                             {subscription?.subscription_services && subscription.subscription_services.length > 0 ? (
                                 <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-3">Active Services</h4>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="text-sm font-medium text-gray-900">Active Services</h4>
+                                        <button
+                                            onClick={() => setIsAddServiceModalOpen(true)}
+                                            className="rounded bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-600 shadow-sm hover:bg-indigo-100"
+                                        >
+                                            Add Service
+                                        </button>
+                                    </div>
                                     <div className="overflow-x-auto ring-1 ring-gray-200 sm:rounded-lg">
                                         <table className="min-w-full divide-y divide-gray-300">
                                             <thead className="bg-gray-50">
                                                 <tr>
                                                     <th scope="col" className="py-3 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Service</th>
                                                     <th scope="col" className="px-3 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                                                    <th scope="col" className="relative py-3 pl-3 pr-4 sm:pr-6">
+                                                        <span className="sr-only">Actions</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200 bg-white">
@@ -1698,6 +1758,14 @@ ${secondPartyDetails}`;
                                                             <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
                                                                 {service.service_workflows?.status_label || 'Active'}
                                                             </span>
+                                                        </td>
+                                                        <td className="relative whitespace-nowrap py-3 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                                            <button
+                                                                onClick={() => handleDeleteService(service.id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                            >
+                                                                Delete
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -2160,6 +2228,26 @@ ${address}`;
                 onUpdate={() => {
                     fetchData();
                     addToast('Item updated successfully', 'success');
+                }}
+            />
+
+            <AddSubscriptionItemModal
+                isOpen={isAddItemModalOpen}
+                onClose={() => setIsAddItemModalOpen(false)}
+                subscriptionId={id || ''}
+                onSuccess={() => {
+                    fetchData();
+                    addToast('Item added successfully', 'success');
+                }}
+            />
+
+            <AddSubscriptionServiceModal
+                isOpen={isAddServiceModalOpen}
+                onClose={() => setIsAddServiceModalOpen(false)}
+                subscriptionId={id || ''}
+                onSuccess={() => {
+                    fetchData();
+                    addToast('Service added successfully', 'success');
                 }}
             />
         </div >
