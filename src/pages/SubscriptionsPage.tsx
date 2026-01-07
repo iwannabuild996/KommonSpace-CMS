@@ -51,7 +51,16 @@ export default function SubscriptionsPage() {
             matchesRubberStamp = sub.rubber_stamp === 'With Client';
         }
 
-        return matchesSearch && matchesStatus && matchesRubberStamp;
+        // Filter by Name Board query param
+        const nameBoardParam = searchParams.get('nameBoard');
+        let matchesNameBoard = true;
+        if (nameBoardParam === 'Available') {
+            matchesNameBoard = sub.name_board === 'Available';
+        } else if (nameBoardParam === 'Not Available') {
+            matchesNameBoard = sub.name_board === 'Not Available' || !sub.name_board;
+        }
+
+        return matchesSearch && matchesStatus && matchesRubberStamp && matchesNameBoard;
     });
 
     useEffect(() => {
@@ -135,6 +144,15 @@ export default function SubscriptionsPage() {
                         <option value="Available">Available</option>
                         <option value="Not Available">Not Available</option>
                         <option value="With Client">With Client</option>
+                    </select>
+                    <select
+                        className="block rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        value={searchParams.get('nameBoard') || ''}
+                        onChange={(e) => handleFilterChange('nameBoard', e.target.value)}
+                    >
+                        <option value="">All Name Boards</option>
+                        <option value="Available">Available</option>
+                        <option value="Not Available">Not Available</option>
                     </select>
                 </div>
             </div>
